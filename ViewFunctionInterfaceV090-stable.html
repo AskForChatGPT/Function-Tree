@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗黑節點編輯器</title>
+<style>
+body {
+  background: #1e1e1e;
+  color: #ffffff;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+#canvas-container {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: grab;
+}
+#canvas-container.panning {
+  cursor: grabbing;
+}
+#canvas-container.connecting {
+  cursor: crosshair;
+}
+.node {
+  position: absolute;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: 200px;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  transform-origin: 0 0;
+}
+.node-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.node-title {
+  flex-grow: 1;
+  background: #3a3a3a;
+  border: none;
+  color: #fff;
+  padding: 5px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+.input-port, .output-port {
+  width: 10px;
+  height: 10px;
+  background: #888;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.input-port {
+  margin-right: 10px;
+}
+.input-port:hover, .output-port:hover {
+  background: #ccc;
+}
+.item {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  background: #333;
+  padding: 5px;
+  border-radius: 4px;
+}
+.item-text {
+  flex-grow: 1;
+  background: #3a3a3a;
+  border: none;
+  color: #fff;
+  padding: 5px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.add-node-btn {
+  background: #555;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  margin-right: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.add-node-btn:hover {
+  background: #777;
+}
+.add-item-btn {
+  background: #555;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+.add-item-btn:hover {
+  background: #777;
+}
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+#nodes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+
+
+.delete-node-btn {
+  background: #ff4444;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  margin-left: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.delete-node-btn:hover {
+  background: #ff6666;
+}
+
+/* 新增的樣式 */
+.N-input {
+  width: 100%;
+  min-height: 60px;
+  background: #3a3a3a;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 5px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.paragraph-btn {
+  width: 100%;
+  background: #4a4a4a;
+  border: 1px solid #555;
+  color: #aaa;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paragraph-popup {
+  position: fixed;
+  background: rgba(45, 45, 45, 0.7); /* 70%透明度 */
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 9999; /* 極高的z-index確保置頂 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  white-space: pre-wrap;
+  font-family: monospace;
+  pointer-events: auto;
+  display: none;
+  backdrop-filter: blur(2px); /* 可選的模糊效果 */
+}
+.paragraph-popup {
+  position: relative;
+  z-index: 2147483647;
+  max-width: 80vw;
+  max-height: 80vh;
+  pointer-events: auto;
+  overflow: auto;
+}
+
+.paragraph-popup-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647; /* 最大可能值 */
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+.paragraph-popup-container > div:first-child {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  pointer-events: auto;
+}
+
+.paragraph-popup::after {
+  content: "按 X 清空內容";
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 10px;
+  color: #888;
+}
+
+
+
+.node-title,
+.item-text,
+.paragraph-input,
+.N-input {
+  background: #3a3a3a !important; /* 深灰背景 */
+  color: #ffffff !important;      /* 白色文字 */
+  border: 1px solid #555 !important; /* 深灰色邊框 */
+}
+
+/* 針對段落輸入框的特定樣式 */
+.paragraph-input {
+  width: 100%;
+  min-height: 60px;
+  padding: 5px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+/* 輸入框聚焦時的樣式 */
+.node-title:focus,
+.item-text:focus,
+.paragraph-input:focus {
+  outline: none;
+  border-color: #777 !important; /* 聚焦時邊框變亮 */
+}
+
+body {
+  background: #1e1e1e;
+  color: #ffffff;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 新增的輸入框暗黑模式樣式 */
+.node-title,
+.item-text,
+.paragraph-input,
+.N-input {
+  background: #3a3a3a !important;
+  color: #ffffff !important;
+  border: 1px solid #555 !important;
+}
+
+.paragraph-input {
+  width: 100%;
+  min-height: 60px;
+  padding: 5px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.node-title:focus,
+.item-text:focus,
+.paragraph-input:focus {
+  outline: none;
+  border-color: #777 !important;
+}
+
+#transform-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+#toolbar {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: #2d2d2d;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-btn {
+  background: #555;
+  border: none;
+  color: #fff;
+  padding: 8px 12px;
+  margin: 0 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.toolbar-btn:hover {
+  background: #777;
+}
+
+/* 新增文件輸入樣式 */
+#file-input {
+  display: none;
+}
+
+/* 新增框选和多选样式 */
+.selection-box {
+  position: absolute;
+  background: rgba(100, 100, 255, 0.1);
+  border: 1px solid rgba(100, 100, 255, 0.8);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.node.selected {
+  border: 2px solid #4a90e2;
+  box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+}
+
+#canvas-container.selecting {
+  cursor: crosshair;
+}
+
+
+.copy-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255, 165, 0, 0.7); /* 橙黃色半透明 */
+  border: none;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 1;
+}
+.copy-btn:hover {
+  background: rgba(255, 165, 0, 0.9); /* 懸停時更不透明 */
+}
+
+
+</style>
+</head>
+<body>
+
+  <div id="toolbar">
+  <button class="toolbar-btn" id="save-btn">保存</button>
+  <button class="toolbar-btn" id="load-btn">載入</button>
+  <input type="file" id="file-input" accept=".json">
+</div>
+
+<div id="canvas-container">
+<canvas id="connection-canvas"></canvas>
+  <div id="canvas-container">
+    <div id="transform-container">
+      <canvas id="connection-canvas"></canvas>
+      <div id="nodes-container"></div>
+    </div>
+  </div>
+</div>
+<script>
+const container = document.getElementById('canvas-container');
+const nodesContainer = document.getElementById('nodes-container');
+const canvas = document.getElementById('connection-canvas');
+const ctx = canvas.getContext('2d');
+
+// 全局存储所有弹窗的集合
+const ALL_ACTIVE_POPUPS = new Set();
+
+// 函數名稱黑名單
+const FUNCTION_BLACKLIST = [
+  'Array',
+  'add',
+  'setTimeout',
+  'map',
+  'parse',
+  'floor',
+  'Set',
+    'createRadialGradient',
+      'addColorStop',
+      'createLinearGradient',
+      'translate',
+      'preventDefault',
+      'getBoundingClientRect',
+
+      'drawImage',
+      'from',
+      'warn',
+
+      'now',
+            'ceil',
+            'indexOf',
+'remove',
+'findIndex',
+'isNaN',
+'cos',
+      
+
+      'log',
+        'some',
+
+        'toFixed',
+        'requestAnimationFrame',
+        
+ 
+  'pow',
+  'toString',
+  'slice',
+  'filter',
+  'function',
+  'find',
+    'setLineDash',
+      'strokeRect',
+
+      'clearRect',
+
+      'fillRect',
+  
+      'showStatusMessage',
+  
+      'getRandomFluorescentColor',
+  
+  'removeEventListener',
+  'save',
+    'rgba',
+      'restore',
+
+      'arc',
+      'lightenColor',
+      'fillText',
+
+      'random',
+      
+      'arc',
+            'sqrt',
+                  'abs',
+                    'sin',
+                      'atan2',
+  
+  
+  
+  'push',
+  'catch',
+  'error',
+  'getElementById',
+  'appendChild',
+  'addEventListener',
+  'keys',
+  'createElement',
+  'createElement',
+  'createElement',
+  'createElement',
+  'beginPath', // 禁止 Canvas 2D API 的 beginPath
+  'moveTo',
+  'lineTo',
+  'stroke',
+  'fill',
+  'closePath',
+  'if',
+  'for',
+  'forEach',
+  'while',
+  'switch',
+  'max',
+  'min',
+  'return',
+  'console.log'
+];
+
+let nodes = [];
+let connections = [];
+let draggingNode = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let connecting = null;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let scale = 1;
+let translateX = 0;
+let translateY = 0;
+let spacePressed = false;
+// 新增全局變量來追蹤當前活動的彈出框
+let activePopup = null;
+let popupScrollPosition = 0;
+// 在全局变量中添加
+let dragStartWorldX = 0;
+let dragStartWorldY = 0;
+
+
+// 新增全局变量
+let selectionBox = null;
+let isSelecting = false;
+let selectionStartX = 0;
+let selectionStartY = 0;
+let selectedNodes = new Set();
+
+
+
+
+// 新增變量
+const transformContainer = document.getElementById('transform-container');
+let lastScale = 1;
+document.getElementById('save-btn').addEventListener('click', saveProject);
+document.getElementById('load-btn').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', loadProject);
+
+
+
+// 保存項目
+function saveProject() {
+  try {
+    const nodesData = nodes.map(node => {
+      const element = node.element;
+      
+      // 獲取段落內容（無論當前顯示的是輸入框還是按鈕）
+      let content = '';
+      const inputField = element.querySelector('.paragraph-input');
+      const contentBtn = element.querySelector('.paragraph-btn');
+      const popup = element.querySelector('.paragraph-popup');
+      
+      if (contentBtn && popup) {
+        // 如果已轉換為按鈕，從彈出框或按鈕的data屬性獲取原始內容
+        content = popup.textContent || contentBtn.dataset.originalContent || '';
+      } else if (inputField) {
+        // 如果還是輸入框狀態，直接獲取值
+        content = inputField.value;
+      }
+      
+      return {
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        title: element.querySelector('.node-title').value || '未命名節點',
+        content: content,
+        isConvertedToButton: !!contentBtn, // 記錄是否已轉換
+        items: Array.from(element.querySelectorAll('.item-text')).map(item => item.value),
+        metadata: {
+          contentLength: content.length,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    });
+
+    // 准备连接数据
+    const connectionsData = connections.map(conn => ({
+      fromNode: conn.fromNode,
+      fromOutput: conn.fromOutput || 0,
+      toNode: conn.toNode
+    }));
+
+    // 创建完整项目数据
+    const projectData = {
+      version: '2.0', // 版本号
+      nodes: nodesData,
+      connections: connectionsData,
+      viewState: { 
+        scale,
+        translateX,
+        translateY
+      },
+      savedAt: new Date().toISOString()
+    };
+
+    // 生成下载文件
+    const dataStr = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const filename = `node-project-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+  } catch (error) {
+    console.error('保存失败:', error);
+    alert(`保存错误: ${error.message}`);
+  }
+}
+// 載入項目
+function loadProject(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const projectData = JSON.parse(e.target.result);
+      
+      // 清除現有數據
+      nodesContainer.innerHTML = '';
+      nodes = [];
+      connections = [];
+      
+      // 恢復視圖狀態
+      if (projectData.viewState) {
+        scale = projectData.viewState.scale || 1;
+        translateX = projectData.viewState.translateX || window.innerWidth / 2 - 100;
+        translateY = projectData.viewState.translateY || window.innerHeight / 2 - 50;
+        applyTransform();
+      }
+      
+      // 恢復節點
+      const nodeMap = {};
+      projectData.nodes?.forEach(nodeData => {
+        const newNode = createNode(nodeData.x, nodeData.y, nodeData.title || '節點');
+        nodeMap[nodeData.id] = newNode;
+        
+        // 恢復段落內容
+        const paragraphInput = newNode.element.querySelector('.paragraph-input');
+        if (paragraphInput && nodeData.content !== undefined) {
+          paragraphInput.value = nodeData.content;
+          
+          // 如果原狀態是已轉換按鈕且內容不為空
+          if (nodeData.isConvertedToButton && nodeData.content.trim()) {
+            // 創建按鈕容器
+            const btn = document.createElement('button');
+            btn.className = 'paragraph-btn';
+            btn.textContent = nodeData.content.length > 50 
+              ? nodeData.content.substring(0, 47) + '...' 
+              : nodeData.content;
+            btn.dataset.originalContent = nodeData.content;
+            
+            // 創建彈出框
+            const popup = document.createElement('div');
+            popup.className = 'paragraph-popup';
+            popup.textContent = nodeData.content;
+            
+            // 創建容器
+            const container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.display = 'inline-block';
+            container.style.width = '100%';
+            
+            container.appendChild(btn);
+            container.appendChild(popup);
+            
+            // 替換輸入框
+            paragraphInput.replaceWith(container);
+            
+            // 設置按鈕事件
+            setupParagraphButtonEvents(btn, popup, paragraphInput, newNode);
+          }
+        }
+        
+        // 恢復項目列表
+  // 恢復項目列表
+const itemsContainer = newNode.element.querySelector('.items');
+if (itemsContainer && nodeData.items) {
+  itemsContainer.innerHTML = '';
+  
+  nodeData.items.forEach((itemText, index) => {
+    const newItem = document.createElement('div');
+    newItem.className = 'item';
+    newItem.innerHTML = `
+      <input type="text" class="item-text" value="${escapeHtml(itemText || '項目 ' + (index + 1))}">
+      <button class="add-node-btn">+</button>
+      <div class="output-port" data-type="output"></div>
+    `;
+    itemsContainer.appendChild(newItem);
+    
+    newNode.outputs.push(index);
+    setupAddNodeButton(newItem, newNode, index, container);
+    setupOutputPort(newItem, newNode, index, container);
+  });
+}
+      });
+      
+      // 恢復連接
+      projectData.connections?.forEach(conn => {
+        if (nodeMap[conn.fromNode] && nodeMap[conn.toNode]) {
+          connections.push({
+            fromNode: nodeMap[conn.fromNode].id,
+            fromOutput: conn.fromOutput || 0,
+            toNode: nodeMap[conn.toNode].id
+          });
+        }
+      });
+      
+      drawConnections();
+      showStatusMessage('項目載入完成', 'success');
+    } catch (error) {
+      console.error('載入失敗:', error);
+      showStatusMessage('載入失敗，請檢查文件格式', 'error');
+    }
+  };
+  
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+
+function setupParagraphButtonEvents(btn, popup, paragraphInput, nodeData) {
+
+
+   // 創建COPY按鈕
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = '';
+  
+  // 添加點擊事件
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    try {
+      navigator.clipboard.writeText(popup.textContent)
+        .then(() => {
+          copyBtn.textContent = '已複製!';
+          setTimeout(() => {
+            copyBtn.textContent = '';
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('複製失敗:', err);
+          copyBtn.textContent = '複製失敗';
+          setTimeout(() => {
+            copyBtn.textContent = '';
+          }, 2000);
+          
+        });
+    } catch (err) {
+      console.error('複製失敗:', err);
+      copyBtn.textContent = '複製失敗';
+      setTimeout(() => {
+        copyBtn.textContent = '';
+      }, 2000);
+    }
+  });
+
+  // 將COPY按鈕添加到彈出框
+  popup.appendChild(copyBtn);
+
+
+  // 保存原始DOM位置（用于完美还原）
+  const originalParent = popup.parentNode;
+  const originalNextSibling = popup.nextSibling;
+  const originalStyles = {
+    position: popup.style.position,
+    left: popup.style.left,
+    top: popup.style.top,
+    zIndex: popup.style.zIndex
+  };
+
+
+
+  // 点击按钮显示弹窗
+  btn.addEventListener('click', (e) => {
+    // 移动弹窗到body直接子元素（确保置顶）
+    document.body.appendChild(popup);
+    
+    // 设置弹窗样式（确保在最顶层）
+    popup.style.position = 'fixed';
+    popup.style.zIndex = '2147483647';
+    popup.style.left = `${btn.getBoundingClientRect().left}px`;
+    popup.style.top = `${btn.getBoundingClientRect().bottom}px`;
+    popup.style.display = 'block';
+    
+    // 添加到全局集合
+    ALL_ACTIVE_POPUPS.add(popup);
+    activePopup = popup;
+    
+    e.stopPropagation();
+  });
+
+  // 点击外部关闭所有弹窗
+  const handleClickOutside = (e) => {
+    let isClickInsideAnyPopup = false;
+    
+    // 检查是否点击了任何弹窗或其关联按钮
+    ALL_ACTIVE_POPUPS.forEach(p => {
+      const relatedBtn = p.previousElementSibling?.classList?.contains('paragraph-btn') 
+                       ? p.previousElementSibling 
+                       : null;
+      
+      if (p.contains(e.target) || (relatedBtn && relatedBtn.contains(e.target))) {
+        isClickInsideAnyPopup = true;
+      }
+    });
+
+    // 如果点击在弹窗外部，关闭所有弹窗
+    if (!isClickInsideAnyPopup) {
+      ALL_ACTIVE_POPUPS.forEach(p => {
+        p.style.display = 'none';
+        // 还原原始DOM位置
+        if (originalParent && p.parentNode === document.body) {
+          originalParent.insertBefore(p, originalNextSibling);
+        }
+        // 还原原始样式
+        Object.entries(originalStyles).forEach(([prop, value]) => {
+          p.style[prop] = value;
+        });
+      });
+      ALL_ACTIVE_POPUPS.clear();
+      activePopup = null;
+    }
+  };
+
+  // X键清空功能（保持原有逻辑）
+  const clearHandler = (e) => {
+    if (e.key.toLowerCase() === 'x' && activePopup === popup) {
+      paragraphInput.value = '';
+      resetItemsList(nodeData);
+      btn.parentElement.replaceWith(paragraphInput);
+      popup.style.display = 'none';
+      ALL_ACTIVE_POPUPS.delete(popup);
+      activePopup = null;
+      e.preventDefault();
+    }
+  };
+
+  // 添加事件监听
+  document.addEventListener('click', handleClickOutside);
+  document.addEventListener('keydown', clearHandler);
+
+  // 自动清理（防止内存泄漏）
+  popup.addEventListener('DOMNodeRemoved', () => {
+    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('keydown', clearHandler);
+    ALL_ACTIVE_POPUPS.delete(popup);
+  });
+}
+
+// 初始化畫布大小
+function resizeCanvas() {
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 視圖轉換函數
+function toWorldX(x) {
+  return (x - translateX) / scale;
+}
+
+function toWorldY(y) {
+  return (y - translateY) / scale;
+}
+
+function toScreenX(x) {
+  return x * scale + translateX;
+}
+
+function toScreenY(y) {
+  return y * scale + translateY;
+}
+
+// 提取到外部的工具函數
+function extractFunctionName(content) {
+  const functionNameMatch = content.match(/function\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/);
+  return functionNameMatch ? functionNameMatch[1] : null;
+}
+
+function extractCalledFunctions(content, functionNameToExclude) {
+  const functionCallRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*)\s*\([^)]*\)/g;
+  const functionNames = new Set();
+  let match;
+
+  while ((match = functionCallRegex.exec(content)) !== null) {
+    const calledFunctionName = match[1];
+    // 檢查是否在黑名單中或是要排除的函數名
+    if (!FUNCTION_BLACKLIST.includes(calledFunctionName) && 
+        calledFunctionName !== functionNameToExclude) {
+      functionNames.add(calledFunctionName);
+    }
+  }
+
+  return Array.from(functionNames);
+}
+// HTML转义辅助函数
+function escapeHtml(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// 显示状态消息函数
+function showStatusMessage(message, type = 'info') {
+  const msg = document.createElement('div');
+  msg.textContent = message;
+  msg.style.position = 'fixed';
+  msg.style.bottom = '20px';
+  msg.style.right = '20px';
+  msg.style.padding = '10px 20px';
+  msg.style.background = type === 'error' ? '#ff4444' : '#4CAF50';
+  msg.style.color = 'white';
+  msg.style.borderRadius = '4px';
+  msg.style.zIndex = '10000';
+  
+  document.body.appendChild(msg);
+  
+  setTimeout(() => {
+    msg.style.transition = 'opacity 0.5s';
+    msg.style.opacity = '0';
+    setTimeout(() => msg.remove(), 500);
+  }, 3000);
+}
+
+
+function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {
+  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    const name = itemElement.querySelector('.item-text').value;
+
+    const childNodes = connections.filter(conn =>
+      conn.fromNode === nodeData.id &&
+      conn.fromOutput === outputIndex
+    ).length;
+
+    const baseX = nodeData.x + 200 / scale;
+    const baseY = nodeData.y + (childNodes * 120 / scale);
+
+    const newNode = createNode(
+      baseX,
+      baseY,
+      name + ' 節點'
+    );
+
+    connections.push({
+      fromNode: nodeData.id,
+      fromOutput: outputIndex,
+      toNode: newNode.id
+    });
+    drawConnections();
+    e.stopPropagation();
+  });
+}
+
+function setupOutputPort(itemElement, nodeData, outputIndex, container) {
+  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {
+    if (spacePressed || e.button === 1) return;
+
+    const rect = e.target.getBoundingClientRect();
+    connecting = {
+      startX: rect.left + rect.width / 2,
+      startY: rect.top + rect.height / 2,
+      fromNode: nodeData.id,
+      fromOutput: outputIndex
+    };
+    container.classList.add('connecting');
+    e.stopPropagation();
+  });
+}
+
+function createFunctionItems(nodeData, functionNames, container) {
+  const itemsContainer = nodeData.element.querySelector('.items');
+  itemsContainer.innerHTML = '';
+
+  functionNames.forEach((name, index) => {
+    const newItem = document.createElement('div');
+    newItem.className = 'item';
+    newItem.innerHTML = `
+      <input type="text" class="item-text" value="${name}">
+      <button class="add-node-btn">+</button>
+      <div class="output-port" data-type="output"></div>
+    `;
+    itemsContainer.appendChild(newItem);
+
+    nodeData.outputs = functionNames.map((_, i) => i);
+    setupAddNodeButton(newItem, nodeData, index, container);
+    setupOutputPort(newItem, nodeData, index, container);
+  });
+}
+
+function setupParagraphPopup(paragraphInput, content, nodeData) {
+  const btn = document.createElement('button');
+  btn.className = 'paragraph-btn';
+  btn.textContent = content.length > 50 ? content.substring(0, 47) + '...' : content;
+
+  const popup = document.createElement('div');
+  popup.className = 'paragraph-popup';
+  popup.textContent = content;
+
+  const container = document.createElement('div');
+  container.style.position = 'relative';
+  container.style.display = 'inline-block';
+  container.style.width = '100%';
+
+  container.appendChild(btn);
+  container.appendChild(popup);
+
+ paragraphInput.replaceWith(container);
+  // 新增：用於存儲彈出框容器引用
+  let popupContainer = null;
+
+  btn.addEventListener('click', (e) => {
+    if (popupContainer && document.body.contains(popupContainer)) {
+      popupContainer.remove();
+    }
+
+    const btnRect = btn.getBoundingClientRect();
+    const btnCenterX = btnRect.left + btnRect.width / 2;
+    const btnCenterY = btnRect.top + btnRect.height / 2;
+    
+    const worldX = (btnCenterX - translateX) / scale;
+    const worldY = (btnCenterY - translateY) / scale;
+    
+    const popupWidth = 600;
+    const popupHeight = 200;
+    
+    popupContainer = document.createElement('div');
+    popupContainer.style.position = 'fixed';
+    popupContainer.style.left = '0';
+    popupContainer.style.top = '0';
+    popupContainer.style.width = `${popupWidth}px`;
+    popupContainer.style.height = `${popupHeight}px`;
+    popupContainer.style.transform = `
+      translate(${worldX * scale + translateX - popupWidth/2}px, 
+                ${worldY * scale + translateY - popupHeight/2}px)
+    `;
+    popupContainer.style.zIndex = '10000';
+    popup.style.zIndex = '10000';
+    
+    popup.style.display = 'block';
+    popup.style.position = 'absolute';
+    popup.style.width = '100%';
+    popup.style.height = '100%';
+    popup.style.overflow = 'auto';
+    popupContainer.appendChild(popup);
+    
+    document.body.appendChild(popupContainer);
+
+    // 設置為當前活動彈出框
+    activePopup = popup;
+    popupScrollPosition = 0;
+    updatePopupScroll();
+    
+    e.stopPropagation();
+  });
+
+  // 保留原有的鍵盤事件監聽
+  const clearContentHandler = function(e) {
+    if (e.key.toLowerCase() === 'x' && activePopup === popup) {
+      paragraphInput.value = '';
+      resetItemsList(nodeData);
+      container.replaceWith(paragraphInput);
+      document.removeEventListener('keydown', clearContentHandler);
+      if (popupContainer) {
+        popupContainer.remove();
+        popupContainer = null;
+      }
+      activePopup = null;
+      e.preventDefault();
+    }
+  };
+  document.addEventListener('keydown', clearContentHandler);
+
+  // 點擊外部關閉
+document.addEventListener('click', (e) => {
+  if (popupContainer && !popupContainer.contains(e.target)) {  // 這裡缺少右括號
+    popupContainer.remove();
+    popupContainer = null;
+    activePopup = null;
+  }
+});
+
+ 
+}
+function resetItemsList(nodeData) {
+  const itemsContainer = nodeData.element.querySelector('.items');
+  itemsContainer.innerHTML = `
+    <div class="item">
+      <input type="text" class="item-text" value="項目 1">
+      <button class="add-node-btn">+</button>
+      <div class="output-port" data-type="output"></div>
+    </div>
+  `;
+
+  nodeData.outputs = [0];
+  const newItem = itemsContainer.querySelector('.item');
+  setupAddNodeButton(newItem, nodeData, 0, container);
+  setupOutputPort(newItem, nodeData, 0, container);
+  
+  // 恢復輸入框（如果被替換）
+  const containerDiv = nodeData.element.querySelector('.paragraph-container');
+  if (containerDiv) {
+    const textarea = document.createElement('textarea');
+    textarea.className = 'paragraph-input';
+    textarea.placeholder = '貼上段落內容...';
+    containerDiv.replaceWith(textarea);
+  }
+}
+
+
+function arrangeChildNodes(parentNodeId) {
+  const children = connections.filter(conn => conn.fromNode === parentNodeId)
+    .map(conn => nodes[conn.toNode]);
+
+  children.forEach((child, index) => {
+    child.x = nodes[parentNodeId].x + 200 / scale;
+    child.y = nodes[parentNodeId].y + (index * 120 / scale);
+    updateNodePosition(child);
+  });
+
+  drawConnections();
+}
+
+// 主函數
+function createNode(x, y, title = '節點') {
+  const node = createNodeElement(x, y, title);
+  const nodeData = initializeNodeData(node, x, y);
+  
+  setupNodeDrag(node, nodeData);
+  setupDeleteButton(node, nodeData);
+  setupTitleInput(node);
+  setupParagraphInput(node, nodeData);
+  setupInitialAddButton(node, nodeData);
+  setupAddItemButton(node, nodeData);
+  setupPortEvents(node, nodeData);
+  
+  updateNodePosition(nodeData);
+  return nodeData;
+}
+
+// 创建节点DOM元素
+function createNodeElement(x, y, title) {
+  const node = document.createElement('div');
+  node.className = 'node';
+  node.style.left = `${x}px`;
+  node.style.top = `${y}px`;
+  node.innerHTML = `
+    <div class="node-header">
+      <div class="input-port" data-type="input"></div>
+      <input type="text" class="node-title" value="${title}">
+      <button class="delete-node-btn">×</button>
+    </div>
+    <textarea class="paragraph-input" placeholder="貼上段落內容..."></textarea>
+    <div class="items">
+      <div class="item">
+        <input type="text" class="item-text" value="項目 1">
+        <button class="add-node-btn">+</button>
+        <div class="output-port" data-type="output"></div>
+      </div>
+    </div>
+    <button class="add-item-btn">新加項目</button>
+  `;
+  nodesContainer.appendChild(node);
+  return node;
+}
+
+// 初始化节点数据
+function initializeNodeData(node, x, y) {
+  const nodeData = { 
+    element: node, 
+    id: nodes.length, 
+    outputs: [0], 
+    x, 
+    y 
+  };
+  nodes.push(nodeData);
+  return nodeData;
+}
+
+// 设置节点拖拽
+function setupNodeDrag(node, nodeData) {
+  node.addEventListener('mousedown', (e) => {
+    if (e.target.className.includes('node') || e.target.className === 'node-title') {
+      if (spacePressed || e.button === 1) return;
+
+      draggingNode = nodeData;
+      dragStartWorldX = toWorldX(e.clientX);
+      dragStartWorldY = toWorldY(e.clientY);
+      dragOffsetX = dragStartWorldX - nodeData.x;
+      dragOffsetY = dragStartWorldY - nodeData.y;
+
+      e.stopPropagation();
+    }
+  });
+}
+
+// 设置删除按钮
+function setupDeleteButton(node, nodeData) {
+  node.querySelector('.delete-node-btn').addEventListener('click', (e) => {
+    connections = connections.filter(conn =>
+      conn.fromNode !== nodeData.id && conn.toNode !== nodeData.id
+    );
+    nodes = nodes.filter(n => n.id !== nodeData.id);
+    node.remove();
+    drawConnections();
+    e.stopPropagation();
+  });
+}
+
+// 设置标题输入
+function setupTitleInput(node) {
+  const titleInput = node.querySelector('.node-title');
+  titleInput.addEventListener('input', () => {
+    titleInput.value = titleInput.value.trim();
+  });
+}
+
+// 设置段落输入
+function setupParagraphInput(node, nodeData) {
+  const paragraphInput = node.querySelector('.paragraph-input');
+  paragraphInput.addEventListener('input', function() {
+    handleParagraphInput(this, node, nodeData);
+  });
+}
+
+// 处理段落输入
+function handleParagraphInput(inputElement, node, nodeData) {
+  const content = inputElement.value.trim();
+  if (content === '') return;
+
+  const functionName = extractFunctionName(content);
+  if (functionName) {
+    node.querySelector('.node-title').value = functionName;
+  }
+
+  const calledFunctions = extractCalledFunctions(content, functionName);
+  if (calledFunctions.length > 0) {
+    createFunctionItems(nodeData, calledFunctions, container);
+  }
+
+  setupParagraphPopup(inputElement, content, nodeData);
+}
+
+// 设置初始添加按钮
+function setupInitialAddButton(node, nodeData) {
+  node.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    handleAddNodeClick(nodeData, 0, e);
+  });
+}
+
+// 设置添加项目按钮
+function setupAddItemButton(node, nodeData) {
+  node.querySelector('.add-item-btn').addEventListener('click', () => {
+    addNewItem(node, nodeData);
+  });
+}
+
+// 添加新项目
+function addNewItem(node, nodeData) {
+  const items = node.querySelector('.items');
+  const itemCount = items.children.length + 1;
+  const newItem = document.createElement('div');
+  newItem.className = 'item';
+  newItem.innerHTML = `
+    <input type="text" class="item-text" value="項目 ${itemCount}">
+    <button class="add-node-btn">+</button>
+    <div class="output-port" data-type="output"></div>
+  `;
+  items.appendChild(newItem);
+  const outputIndex = nodeData.outputs.length;
+  nodeData.outputs.push(outputIndex);
+
+  setupItemEvents(newItem, nodeData, outputIndex);
+}
+
+// 设置项目事件
+function setupItemEvents(item, nodeData, outputIndex) {
+  item.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    handleAddNodeClick(nodeData, outputIndex, e);
+  });
+
+  setupOutputPort(item.querySelector('.output-port'), nodeData, outputIndex);
+}
+
+// 处理添加节点点击
+function handleAddNodeClick(nodeData, outputIndex, e) {
+  const childNodes = connections.filter(conn =>
+    conn.fromNode === nodeData.id &&
+    conn.fromOutput === outputIndex
+  ).length;
+
+  const newNodeX = nodeData.x + 200 / scale;
+  const newNodeY = nodeData.y + (childNodes * 120 / scale);
+
+  const newNode = createNode(newNodeX, newNodeY);
+
+  connections.push({
+    fromNode: nodeData.id,
+    fromOutput: outputIndex,
+    toNode: newNode.id
+  });
+  drawConnections();
+  e.stopPropagation();
+}
+
+// 设置端口事件
+function setupPortEvents(node, nodeData) {
+  // 输入端口
+  node.querySelector('.input-port').addEventListener('mouseup', (e) => {
+    if (connecting) {
+      connections.push({
+        fromNode: connecting.fromNode,
+        fromOutput: connecting.fromOutput,
+        toNode: nodeData.id
+      });
+      connecting = null;
+      container.classList.remove('connecting');
+      drawConnections();
+    }
+  });
+
+  // 初始输出端口
+  setupOutputPort(node.querySelector('.output-port'), nodeData, 0);
+}
+
+// 设置输出端口
+function setupOutputPort(portElement, nodeData, outputIndex) {
+  portElement.addEventListener('mousedown', (e) => {
+    if (spacePressed || e.button === 1) return;
+
+    const rect = e.target.getBoundingClientRect();
+    connecting = {
+      startX: rect.left + rect.width / 2,
+      startY: rect.top + rect.height / 2,
+      fromNode: nodeData.id,
+      fromOutput: outputIndex
+    };
+    container.classList.add('connecting');
+    e.stopPropagation();
+  });
+}
+
+// 修改節點位置更新函數
+function updateNodePosition(node) {
+  node.element.style.left = `${node.x}px`;
+  node.element.style.top = `${node.y}px`;
+}
+
+function updateAllNodesPosition() {
+  nodes.forEach(node => {
+    updateNodePosition(node);
+  });
+}
+// 更新彈出框的滾動位置
+function updatePopupScroll() {
+  if (activePopup) {
+    activePopup.scrollTop = popupScrollPosition;
+  }
+}
+
+
+// 创建框选元素
+function createSelectionBox() {
+  selectionBox = document.createElement('div');
+  selectionBox.className = 'selection-box';
+  selectionBox.style.display = 'none';
+  document.body.appendChild(selectionBox);
+  return selectionBox;
+}
+
+// 更新框选区域
+function updateSelectionBox(x1, y1, x2, y2) {
+  const left = Math.min(x1, x2);
+  const top = Math.min(y1, y2);
+  const width = Math.abs(x2 - x1);
+  const height = Math.abs(y2 - y1);
+  
+  selectionBox.style.left = `${left}px`;
+  selectionBox.style.top = `${top}px`;
+  selectionBox.style.width = `${width}px`;
+  selectionBox.style.height = `${height}px`;
+  selectionBox.style.display = 'block';
+}
+
+// 清除选择
+function clearSelection() {
+  selectedNodes.forEach(id => {
+    const node = nodes[id];
+    if (node && node.element) {
+      node.element.classList.remove('selected');
+    }
+  });
+  selectedNodes.clear();
+  if (selectionBox) {
+    selectionBox.style.display = 'none';
+  }
+}
+
+// 检查节点是否在选择框内
+function isNodeInSelection(node, selectionRect) {
+  const nodeRect = node.element.getBoundingClientRect();
+  
+  return (
+    nodeRect.right > selectionRect.left &&
+    nodeRect.left < selectionRect.right &&
+    nodeRect.bottom > selectionRect.top &&
+    nodeRect.top < selectionRect.bottom
+  );
+}
+
+// 选择节点
+function selectNodesInBox(selectionRect) {
+  clearSelection();
+  
+  nodes.forEach(node => {
+    if (isNodeInSelection(node, selectionRect)) {
+      node.element.classList.add('selected');
+      selectedNodes.add(node.id);
+    }
+  });
+  
+  return selectedNodes.size > 0;
+}
+
+
+
+// 鍵盤控制彈出框滾動
+document.addEventListener('keydown', (e) => {
+  if (!activePopup) return;
+
+  const scrollStep = 20; // 每次滾動的像素數
+
+  switch (e.key.toLowerCase()) {
+    case 'w':
+    popupScrollPosition = Math.max(0, popupScrollPosition - scrollStep);
+    updatePopupScroll();
+    e.preventDefault();
+    break;
+    case 's':
+    if (activePopup) {
+      const maxScroll = activePopup.scrollHeight - activePopup.clientHeight;
+      popupScrollPosition = Math.min(maxScroll, popupScrollPosition + scrollStep);
+      updatePopupScroll();
+      e.preventDefault();
+    }
+    break;
+  }
+});
+
+
+// 初始化視圖位置
+translateX = window.innerWidth / 2 - 100;
+translateY = window.innerHeight / 2 - 50;
+nodesContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+  // 初始化一個節點時使用世界坐標系
+  //createNode(-100, -50); // 這會使節點出現在屏幕中心
+
+
+
+// 更新鼠标事件处理
+container.addEventListener('mousedown', (e) => {
+  if (e.button === 0 && !spacePressed && !draggingNode) { // 左键点击
+    const target = e.target;
+    const isNode = target.closest('.node');
+    
+    if (!isNode) {
+      // 开始框选
+      isSelecting = true;
+      container.classList.add('selecting');
+      selectionStartX = e.clientX;
+      selectionStartY = e.clientY;
+      
+      if (!selectionBox) {
+        createSelectionBox();
+      }
+      updateSelectionBox(selectionStartX, selectionStartY, e.clientX, e.clientY);
+      e.preventDefault();
+    } else if (selectedNodes.size > 0) {
+      // 如果已经有选中的节点，检查点击的是否是其中之一
+      const clickedNode = findNodeByElement(target.closest('.node'));
+      if (clickedNode && selectedNodes.has(clickedNode.id)) {
+        // 开始拖动所有选中的节点
+        draggingNode = clickedNode;
+        dragStartWorldX = toWorldX(e.clientX);
+        dragStartWorldY = toWorldY(e.clientY);
+        dragOffsetX = dragStartWorldX - clickedNode.x;
+        dragOffsetY = dragStartWorldY - clickedNode.y;
+      } else {
+        clearSelection();
+      }
+    }
+  } else if (spacePressed || e.button === 1) { // 空格或中键
+    isPanning = true;
+    panStartX = e.clientX - translateX;
+    panStartY = e.clientY - translateY;
+    container.classList.add('panning');
+    e.preventDefault();
+  }
+});
+
+  document.addEventListener('mouseup', (e) => {
+  if (isSelecting) {
+    const selectionRect = {
+      left: Math.min(selectionStartX, e.clientX),
+      right: Math.max(selectionStartX, e.clientX),
+      top: Math.min(selectionStartY, e.clientY),
+      bottom: Math.max(selectionStartY, e.clientY)
+    };
+    
+    selectNodesInBox(selectionRect);
+    isSelecting = false;
+    container.classList.remove('selecting');
+    selectionBox.style.display = 'none';
+  }
+  
+  draggingNode = null;
+  connecting = null;
+  isPanning = false;
+  container.classList.remove('panning');
+  container.classList.remove('connecting');
+  drawConnections();
+});
+
+  // 替换mousemove事件中的拖拽部分
+ document.addEventListener('mousemove', (e) => {
+  if (isSelecting) {
+    updateSelectionBox(selectionStartX, selectionStartY, e.clientX, e.clientY);
+  } else if (isPanning) {
+    translateX = e.clientX - panStartX;
+    translateY = e.clientY - panStartY;
+    applyTransform();
+    drawConnections();
+  } else if (draggingNode) {
+    const currentWorldX = toWorldX(e.clientX);
+    const currentWorldY = toWorldY(e.clientY);
+    
+    const deltaX = currentWorldX - dragStartWorldX;
+    const deltaY = currentWorldY - dragStartWorldY;
+    
+    if (selectedNodes.size > 0) {
+      // 移动所有选中的节点
+      selectedNodes.forEach(id => {
+        const node = nodes[id];
+        if (node) {
+          node.x += deltaX;
+          node.y += deltaY;
+          updateNodePosition(node);
+        }
+      });
+    } else {
+      // 移动单个节点
+      draggingNode.x = currentWorldX - dragOffsetX;
+      draggingNode.y = currentWorldY - dragOffsetY;
+      updateNodePosition(draggingNode);
+    }
+    
+    dragStartWorldX = currentWorldX;
+    dragStartWorldY = currentWorldY;
+    drawConnections();
+  } else if (connecting) {
+    connecting.currentX = e.clientX;
+    connecting.currentY = e.clientY;
+    drawConnections();
+  }
+});
+
+  // 鍵盤控制
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      spacePressed = true;
+      container.style.cursor = 'grab';
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+      spacePressed = false;
+      if (!isPanning) {
+        container.style.cursor = '';
+      }
+    }
+  });
+
+// 点击空白处取消选择
+container.addEventListener('click', (e) => {
+  if (e.target === container && selectedNodes.size > 0) {
+    clearSelection();
+  }
+});
+
+// 辅助函数：通过元素查找节点
+function findNodeByElement(element) {
+  return nodes.find(node => node.element === element);
+}
+
+  // 滾輪縮放
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+
+  // 獲取鼠標位置相對於視口的坐標
+  const mouseX = e.clientX;
+  const mouseY = e.clientY;
+
+  // 計算縮放前的世界坐標
+  const worldX = (mouseX - translateX) / scale;
+  const worldY = (mouseY - translateY) / scale;
+
+  // 計算新的縮放比例
+  const delta = -e.deltaY;
+  const newScale = delta > 0 ? scale * 1.1 : scale / 1.1;
+  scale = Math.min(Math.max(0.1, newScale), 3);
+
+  // 計算新的平移值 - 保持鼠標下的點在相同位置
+  translateX = mouseX - worldX * scale;
+  translateY = mouseY - worldY * scale;
+
+  // 應用變換
+  applyTransform();
+});
+
+function applyTransform() {
+  // 同時更新 transformContainer 和 nodesContainer 的變換
+  transformContainer.style.transform = `
+    translate(${translateX}px, ${translateY}px)
+    scale(${scale})
+  `;
+  nodesContainer.style.transform = `
+    translate(${translateX}px, ${translateY}px)
+    scale(${scale})
+  `;
+  lastScale = scale;
+  drawConnections();
+}
+
+function drawConnections() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換
+
+  connections.forEach(conn => {
+    const fromNode = nodes[conn.fromNode];
+    const toNode = nodes[conn.toNode];
+
+    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];
+    const toPort = toNode.element.querySelector('.input-port');
+
+    const fromRect = fromPort.getBoundingClientRect();
+    const toRect = toPort.getBoundingClientRect();
+
+    const containerRect = container.getBoundingClientRect();
+
+    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;
+    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;
+    const endX = toRect.left + toRect.width / 2 - containerRect.left;
+    const endY = toRect.top + toRect.height / 2 - containerRect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.bezierCurveTo(
+      startX + 100, startY,
+      endX - 100, endY,
+      endX, endY
+    );
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // 處理連接中的線條
+  if (connecting) {
+    const fromNode = nodes[connecting.fromNode];
+    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];
+    const fromRect = fromPort.getBoundingClientRect();
+
+    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;
+    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;
+    const endX = connecting.currentX - container.getBoundingClientRect().left;
+    const endY = connecting.currentY - container.getBoundingClientRect().top;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2 * (1/scale);
+    ctx.stroke();
+  }
+}
+
+// 修改初始化代碼
+function init() {
+  // 設置canvas大小
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  
+  // 初始化位置和縮放
+  scale = 1;
+  translateX = container.offsetWidth / 2 - 100;
+  translateY = container.offsetHeight / 2 - 50;
+  
+  applyTransform();
+  
+  // 創建初始節點
+  createNode(-100, -50);
+}
+
+// 初始化
+init();
+
+  // 初始化視圖位置
+  translateX = window.innerWidth / 2 - 100;
+  translateY = window.innerHeight / 2 - 50;
+nodesContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+  // 初始化一個節點
+  //createNode(0, 0);
+  </script>
+  </body>
+  </html>
