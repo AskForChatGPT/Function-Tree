@@ -1,0 +1,1685 @@
+{
+  "version": "2.0",
+  "nodes": [
+    {
+      "id": 0,
+      "x": -101,
+      "y": -50,
+      "title": "initializeGameComponents",
+      "content": "function initializeGameComponents() {\n    initGrid();\n    resizeCanvas();\n    initTeleportControls();\n    createTeleportGroupSelector();\n    initCompanionSystem();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "initGrid",
+        "resizeCanvas",
+        "initTeleportControls",
+        "createTeleportGroupSelector",
+        "initCompanionSystem"
+      ],
+      "metadata": {
+        "contentLength": 165,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 1,
+      "x": 276.77898,
+      "y": -362.35703000000007,
+      "title": "initGrid",
+      "content": "function initGrid() {\n                  // 初始化网格和画布\n            try {\n                grid = [];\n                for (let i = 0; i < gridSize; i++) {\n                    grid[i] = Array(gridSize).fill('empty');\n                }\n                if (!savedGrid) {\n                    savedGrid = grid.map(row => [...row]);\n                    savedEnemies = [];\n                    savedDefenseAreas = [];\n                    players = [];\n                    currentPlayerIndex = 0;\n                } else {\n                    grid = savedGrid.map(row => [...row]);\n                    enemies = JSON.parse(JSON.stringify(savedEnemies));\n                    defenseAreas = JSON.parse(JSON.stringify(savedDefenseAreas));\n                }\n                bullets = [];\n                enemyBullets = [];\n                grenade = null;\n                mouseDown = false;\n                lastMousePos = { clientX: 0, clientY: 0 };\n            } catch (error) {\n                console.error('網格初始化錯誤:', error);\n            }\n        }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1033,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 2,
+      "x": 286.88408,
+      "y": -118.98918000000009,
+      "title": "resizeCanvas",
+      "content": "function resizeCanvas() {\n    if (isEditMode) {\n        // 編輯模式：畫布大小 = 網格實際大小\n        canvas.width = gridSize * cellSize;\n        canvas.height = gridSize * cellSize;\n    } else {\n        // 遊戲模式：固定視窗大小\n        canvas.width = viewportWidth * cellSize;\n        canvas.height = viewportHeight * cellSize;\n    }\n    // 重绘网格\n    drawGrid();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawGrid"
+      ],
+      "metadata": {
+        "contentLength": 338,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 3,
+      "x": 236.90572,
+      "y": 1444.3863600000009,
+      "title": "initTeleportControls",
+      "content": "function initTeleportControls() {\n    const controls = document.getElementById('controls');\n    \n    // 傳送點控制面板\n    const teleportPanel = document.createElement('div');\n    teleportPanel.className = 'controls-group';\n    teleportPanel.innerHTML = `\n        <h3>傳送點設置</h3>\n        <div class=\"controls-row\">\n            <button id=\"placeTeleport\" class=\"primary-btn\">放置傳送點</button>\n            <button id=\"newTeleportGroup\" class=\"success-btn\">新傳送組</button>\n            <button id=\"clearTeleports\" class=\"danger-btn\">清除所有</button>\n        </div>\n        <div id=\"teleportGroupDisplay\" style=\"margin-top:10px;padding:5px;background:#2c3e50;border-radius:5px;\">\n            當前組別: <span id=\"currentGroup\">1</span>, \n            顏色: <span id=\"currentColor\" style=\"color:${currentTeleportColor}\">■</span>\n            <span id=\"placingStatus\">(放置A點)</span>\n        </div>\n    `;\n    controls.appendChild(teleportPanel);\n    \n\ndocument.getElementById('confirmPathBtn').addEventListener('click', () => {\n  if (currentPathEnemy && enemyPathPoints.length > 1) {\n    currentPathEnemy.path = [...enemyPathPoints];\n    showStatusMessage(`已為敵人設置 ${enemyPathPoints.length} 個路徑點`, 'success');\n  }\n});\n\n\ndocument.getElementById('placeLickerBtn').addEventListener('click', () => {\n    currentPlacement = 'licker';\n});\n    // 事件監聽\n    document.getElementById('placeTeleport').addEventListener('click', () => {\n        currentPlacement = 'teleport';\n        showStatusMessage('點擊地圖放置傳送點 (先放A點，再放B點)', 'info');\n    });\n    \n    document.getElementById('newTeleportGroup').addEventListener('click', () => {\n        if (!placingTeleportA && teleportPairs[currentTeleportPairId]?.points?.length === 1) {\n            showStatusMessage('請先完成當前組的B點放置！', 'error');\n            return;\n        }\n        \n        currentTeleportColor = getRandomFluorescentColor();\n        currentTeleportPairId = Object.keys(teleportPairs).length;\n        placingTeleportA = true;\n        updateTeleportGroupDisplay();\n        showStatusMessage(`已創建第 ${currentTeleportPairId+1} 組傳送點`, 'success');\n    });\n    \n    document.getElementById('clearTeleports').addEventListener('click', () => {\n        if (confirm('確定要清除所有傳送點嗎？')) {\n            teleports = [];\n            teleportPairs = {};\n            currentTeleportPairId = 0;\n            currentTeleportColor = getRandomFluorescentColor();\n            placingTeleportA = true;\n            updateTeleportGroupDisplay();\n            showStatusMessage('已清除所有傳送點', 'success');\n            drawGrid();\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "updateTeleportGroupDisplay",
+        "drawGrid"
+      ],
+      "metadata": {
+        "contentLength": 2522,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 4,
+      "x": -77.58296000000018,
+      "y": 2922.921100000002,
+      "title": "createTeleportGroupSelector",
+      "content": "function createTeleportGroupSelector() {\n    const selector = document.createElement('div');\n    selector.id = 'teleportGroupSelector';\n    selector.style.margin = '10px';\n    \n    const label = document.createElement('label');\n    label.textContent = '當前傳送組: ';\n    selector.appendChild(label);\n    \n    const select = document.createElement('select');\n    select.id = 'teleportGroupSelect';\n    selector.appendChild(select);\n    \n    const refreshBtn = document.createElement('button');\n    refreshBtn.textContent = '刷新列表';\n    refreshBtn.onclick = refreshTeleportGroups;\n    selector.appendChild(refreshBtn);\n    \n    document.getElementById('controls').appendChild(selector);\n    refreshTeleportGroups();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "refreshTeleportGroups"
+      ],
+      "metadata": {
+        "contentLength": 710,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 5,
+      "x": -138.33749000000026,
+      "y": 3234.242440000002,
+      "title": "initCompanionSystem",
+      "content": "function initCompanionSystem() {\n    // 重置所有同伴狀態\n    players.forEach(player => {\n        player.isCompanion = false;\n        player.companionOf = null;\n        player.companionTarget = null;\n        player.companionState = 'idle';\n    });\n    \n    // 初始化同伴控制按鍵\n    keys.t = false;\n    \n    // 設置同伴事件監聽器\n    setupCompanionControls();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "setupCompanionControls"
+      ],
+      "metadata": {
+        "contentLength": 334,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 6,
+      "x": 555.3694,
+      "y": -2681.8430000000008,
+      "title": "drawGrid",
+      "content": "function drawGrid() {\n    try {\n        clearCanvas();\n        \n        if (isEditMode) {\n            if (regionSelect.visible && regionSelect.bounds) {\n                // 只繪製選定區域內容\n                const { x1, y1, x2, y2 } = regionSelect.bounds;\n                drawVisibleArea(x1, x2 + 1, y1, y2 + 1); // +1 確保包含邊界\n                drawRegionBorder();\n            } else if (regionSelect.active && regionSelect.start && regionSelect.end) {\n                // 正在選擇區域時，顯示完整地圖 + 選擇框\n                \n                drawSelectionPreview();\n                drawFullMap();\n            } else {\n                // 正常顯示完整地圖\n                drawFullMap();\n            }\n        } else {\n            // 遊戲模式\n            if (players.length > 0 && players[currentPlayerIndex].alive) {\n                const player = players[currentPlayerIndex];\n                \n                // 計算攝像機偏移\n                cameraOffset.x = player.x - viewportWidth/2;\n                cameraOffset.y = player.y - viewportHeight/2;\n                \n                // 確保攝像機不會超出地圖邊界\n                cameraOffset.x = Math.max(0, Math.min(cameraOffset.x, gridSize - viewportWidth));\n                cameraOffset.y = Math.max(0, Math.min(cameraOffset.y, gridSize - viewportHeight));\n                \n                // 計算可見範圍\n                const minX = Math.max(0, Math.floor(cameraOffset.x));\n                const maxX = Math.min(gridSize, Math.floor(cameraOffset.x + viewportWidth));\n                const minY = Math.max(0, Math.floor(cameraOffset.y));\n                const maxY = Math.min(gridSize, Math.floor(cameraOffset.y + viewportHeight));\n                \n                // 繪製可見範圍內的內容\n                drawVisibleArea(minX, maxX, minY, maxY);\n                drawAmmoDepotsInView(minX, maxX, minY, maxY);\n            }\n        }\n    } catch (error) {\n        console.error('繪製網格錯誤:', error);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "clearCanvas",
+        "drawVisibleArea",
+        "drawRegionBorder",
+        "drawSelectionPreview",
+        "drawFullMap",
+        "drawAmmoDepotsInView"
+      ],
+      "metadata": {
+        "contentLength": 1878,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 7,
+      "x": 642.62133,
+      "y": 1045.4188200000008,
+      "title": "updateTeleportGroupDisplay",
+      "content": "function updateTeleportGroupDisplay() {\n    const groupDisplay = document.getElementById('teleportGroupDisplay');\n    if (groupDisplay) {\n        groupDisplay.innerHTML = `\n            當前組別: <span id=\"currentGroup\">${currentTeleportPairId + 1}</span>, \n            顏色: <span id=\"currentColor\" style=\"color:${currentTeleportColor}\">■</span>\n            ${placingTeleportA ? '(放置A點)' : '(放置B點)'}\n        `;\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 412,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 8,
+      "x": 678.78572,
+      "y": 2185.1574900000014,
+      "title": "drawGrid",
+      "content": "function drawGrid() {\n    try {\n        clearCanvas();\n        \n        if (isEditMode) {\n            if (regionSelect.visible && regionSelect.bounds) {\n                // 只繪製選定區域內容\n                const { x1, y1, x2, y2 } = regionSelect.bounds;\n                drawVisibleArea(x1, x2 + 1, y1, y2 + 1); // +1 確保包含邊界\n                drawRegionBorder();\n            } else if (regionSelect.active && regionSelect.start && regionSelect.end) {\n                // 正在選擇區域時，顯示完整地圖 + 選擇框\n                \n                drawSelectionPreview();\n                drawFullMap();\n            } else {\n                // 正常顯示完整地圖\n                drawFullMap();\n            }\n        } else {\n            // 遊戲模式\n            if (players.length > 0 && players[currentPlayerIndex].alive) {\n                const player = players[currentPlayerIndex];\n                \n                // 計算攝像機偏移\n                cameraOffset.x = player.x - viewportWidth/2;\n                cameraOffset.y = player.y - viewportHeight/2;\n                \n                // 確保攝像機不會超出地圖邊界\n                cameraOffset.x = Math.max(0, Math.min(cameraOffset.x, gridSize - viewportWidth));\n                cameraOffset.y = Math.max(0, Math.min(cameraOffset.y, gridSize - viewportHeight));\n                \n                // 計算可見範圍\n                const minX = Math.max(0, Math.floor(cameraOffset.x));\n                const maxX = Math.min(gridSize, Math.floor(cameraOffset.x + viewportWidth));\n                const minY = Math.max(0, Math.floor(cameraOffset.y));\n                const maxY = Math.min(gridSize, Math.floor(cameraOffset.y + viewportHeight));\n                \n                // 繪製可見範圍內的內容\n                drawVisibleArea(minX, maxX, minY, maxY);\n                drawAmmoDepotsInView(minX, maxX, minY, maxY);\n            }\n        }\n    } catch (error) {\n        console.error('繪製網格錯誤:', error);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "clearCanvas",
+        "drawVisibleArea",
+        "drawRegionBorder",
+        "drawSelectionPreview",
+        "drawFullMap",
+        "drawAmmoDepotsInView"
+      ],
+      "metadata": {
+        "contentLength": 1878,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 9,
+      "x": 312.8526172727269,
+      "y": 2994.2584627272745,
+      "title": "refreshTeleportGroups",
+      "content": "function refreshTeleportGroups() {\n    const select = document.getElementById('teleportGroupSelect');\n    select.innerHTML = '';\n    \n    // 添加\"新建組\"選項\n    const newOption = document.createElement('option');\n    newOption.value = 'new';\n    newOption.textContent = '-- 新建傳送組 --';\n    select.appendChild(newOption);\n    \n    // 添加現有傳送組\n    const groups = [...new Set(teleports.map(tp => tp.pairId))];\n    groups.forEach(id => {\n        const group = teleports.find(tp => tp.pairId === id);\n        const option = document.createElement('option');\n        option.value = id;\n        option.textContent = `組 ${id.toString().slice(-3)} (${teleports.filter(tp => tp.pairId === id).length}個點)`;\n        option.style.color = group.color;\n        select.appendChild(option);\n    });\n    \n    select.onchange = function() {\n        if (this.value === 'new') {\n            selectedTeleportGroup = null;\n        } else {\n            const group = teleports.find(tp => tp.pairId === parseInt(this.value));\n            selectedTeleportGroup = { pairId: group.pairId, color: group.color };\n        }\n    };\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1093,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 10,
+      "x": 293.42982727272704,
+      "y": 3285.834686363638,
+      "title": "setupCompanionControls",
+      "content": "function setupCompanionControls() {\n    // 移除舊的事件監聽器以避免重複綁定\n    document.removeEventListener('keydown', handleCompanionKeyDown);\n    document.removeEventListener('keyup', handleCompanionKeyUp);\n    canvas.removeEventListener('mousedown', handleCompanionMouseDown);\n    \n    // 添加新的事件監聽器\n    document.addEventListener('keydown', handleCompanionKeyDown);\n    document.addEventListener('keyup', handleCompanionKeyUp);\n    canvas.addEventListener('mousedown', handleCompanionMouseDown);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 484,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 11,
+      "x": 1016.086009090909,
+      "y": -4402.471663636365,
+      "title": "clearCanvas",
+      "content": "function clearCanvas() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 80,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 12,
+      "x": 1027.292495909091,
+      "y": -4133.508367727275,
+      "title": "drawVisibleArea",
+      "content": "function drawVisibleArea(minX, maxX, minY, maxY) {\n    // 如果有選定區域，調整繪製範圍\n    if (regionSelect.visible && regionSelect.bounds) {\n        const { x1, y1, x2, y2 } = regionSelect.bounds;\n        minX = Math.max(minX || 0, x1);\n        maxX = Math.min(maxX || gridSize, x2 + 1); // +1 確保包含邊界\n        minY = Math.max(minY || 0, y1);\n        maxY = Math.min(maxY || gridSize, y2 + 1);\n    }\n\n    // 清除畫布（使用裁切後的尺寸）\n    ctx.fillStyle = '#2a2a2a';\n    ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n    // 繪製網格和地形\n    drawGridAndTerrain(minX, maxX, minY, maxY);\n    \n    // 繪製玩家視覺範圍\n    if (gameState === 'playing' && players.length > 0 && players[currentPlayerIndex].alive) {\n        drawPlayerVision(players[currentPlayerIndex], minX, minY);\n    }\n\n    // 根據遊戲狀態選擇繪製方式\n    if (gameState === 'setup') {\n        drawGridAndTerrain(minX, maxX, minY, maxY);\n    } else {\n        drawTerrainOnly(minX, maxX, minY, maxY);\n    }\n\n    // 繪製傳送點\n    drawTeleportsInView(minX, maxX, minY, maxY);\n    \n    // 繪製窗戶（在遊戲模式和編輯模式都繪製）\n    drawWindowsInView(minX, maxX, minY, maxY);\n\n    // 繪製所有存活玩家（不僅是當前玩家）\n    drawPlayersInView(minX, maxX, minY, maxY);\n\n    // 繪製其他遊戲元素（防禦區域、敵人等）\n    drawDefenseAreasInView(minX, maxX, minY, maxY);\n    drawEnemiesInView(minX, maxX, minY, maxY);\n    drawBulletsInView(minX, maxX, minY, maxY);\n    drawEnemyBulletsInView(minX, maxX, minY, maxY);\n    \n    if (grenade) {\n        drawGrenadeInView(minX, maxX, minY, maxY);\n    }\n    \n    // 繪製紅外瞄準線（如果適用）\n    if (gameState === 'playing' && players.length > 0 && players[currentPlayerIndex].alive) {\n        drawLaserSightInView(players[currentPlayerIndex], minX, minY);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawGridAndTerrain",
+        "drawPlayerVision",
+        "drawTerrainOnly",
+        "drawTeleportsInView",
+        "drawWindowsInView",
+        "drawPlayersInView",
+        "drawDefenseAreasInView",
+        "drawEnemiesInView",
+        "drawBulletsInView",
+        "drawEnemyBulletsInView",
+        "drawGrenadeInView",
+        "drawLaserSightInView"
+      ],
+      "metadata": {
+        "contentLength": 1637,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 13,
+      "x": 1074.357227,
+      "y": -2386.8461780000007,
+      "title": "drawRegionBorder",
+      "content": "function drawRegionBorder() {\n    if (!regionSelect.bounds) return;\n    \n    const {x1, y1, x2, y2} = regionSelect.bounds;\n    ctx.strokeStyle = 'red';\n    ctx.lineWidth = 3;\n    ctx.setLineDash([5, 5]);\n    ctx.strokeRect(\n        0,\n        0,\n        (x2 - x1) * cellSize,\n        (y2 - y1) * cellSize\n    );\n    ctx.setLineDash([]);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 338,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 14,
+      "x": 1070.4232100000002,
+      "y": -2174.275573000001,
+      "title": "drawSelectionPreview",
+      "content": "function drawSelectionPreview() {\n    if (!regionSelect.start || !regionSelect.end) return;\n    \n    const x1 = Math.min(regionSelect.start.x, regionSelect.end.x);\n    const y1 = Math.min(regionSelect.start.y, regionSelect.end.y);\n    const x2 = Math.max(regionSelect.start.x, regionSelect.end.x);\n    const y2 = Math.max(regionSelect.start.y, regionSelect.end.y);\n    \n    ctx.strokeStyle = 'red';\n    ctx.lineWidth = 2;\n    ctx.setLineDash([5, 5]);\n    ctx.strokeRect(\n        x1 * cellSize,\n        y1 * cellSize,\n        (x2 - x1) * cellSize,\n        (y2 - y1) * cellSize\n    );\n    ctx.setLineDash([]);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 609,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 15,
+      "x": 1042.333145,
+      "y": -1063.7593990000007,
+      "title": "drawFullMap",
+      "content": "function drawFullMap() {\n    drawBackgroundImage();\n    drawGridLines();\n    drawGridItems();\n    drawAllWindows();\n    drawAmmoDepots();\n    drawAllTeleports();\n    drawDefenseAreas();\n    drawEnemyPaths();\n    drawPlayers();\n    drawEnemies();\n    drawBullets();\n    drawEnemyBullets();\n    drawGrenade();\n    drawRectWallPreview();\n    drawRemovePreview();\n    drawLineWallPreview();\n    drawCurveWallPreview();\n    drawRemoveEntityPreview();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawBackgroundImage",
+        "drawGridLines",
+        "drawGridItems",
+        "drawAllWindows",
+        "drawAmmoDepots",
+        "drawAllTeleports",
+        "drawDefenseAreas",
+        "drawEnemyPaths",
+        "drawPlayers",
+        "drawEnemies",
+        "drawBullets",
+        "drawEnemyBullets",
+        "drawGrenade",
+        "drawRectWallPreview",
+        "drawRemovePreview",
+        "drawLineWallPreview",
+        "drawCurveWallPreview",
+        "drawRemoveEntityPreview"
+      ],
+      "metadata": {
+        "contentLength": 447,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 16,
+      "x": 1132.08408,
+      "y": 1001.7413700000012,
+      "title": "drawAmmoDepotsInView",
+      "content": "function drawAmmoDepotsInView(minX, maxX, minY, maxY) {\n    ammoDepots.forEach(depot => {\n        if (depot.collected) return;\n        \n        const depotX = Math.floor(depot.x);\n        const depotY = Math.floor(depot.y);\n        \n        if (depotX >= minX && depotX < maxX && depotY >= minY && depotY < maxY) {\n            drawAmmoDepot(depot);\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawAmmoDepot"
+      ],
+      "metadata": {
+        "contentLength": 368,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 17,
+      "x": 1401.7796078090907,
+      "y": -5166.2541107272755,
+      "title": "drawGridAndTerrain",
+      "content": "function drawGridAndTerrain(minX, maxX, minY, maxY) {\n    // 保存當前繪圖狀態\n    ctx.save();\n    \n    // 設置精細的線條寬度（原本可能是 1，改為 0.5 更細）\n    ctx.lineWidth = 0.5;\n    \n    // 計算偏移量\n    const offsetX = regionSelect.visible ? regionSelect.bounds.x1 : cameraOffset.x;\n    const offsetY = regionSelect.visible ? regionSelect.bounds.y1 : cameraOffset.y;\n\n    for (let y = minY; y < maxY; y++) {\n        for (let x = minX; x < maxX; x++) {\n            const screenX = (x - offsetX) * cellSize;\n            const screenY = (y - offsetY) * cellSize;\n            \n            // 繪製網格線（只在編輯模式顯示）\n            if (gameState === 'setup') {\n                ctx.strokeStyle = 'rgba(85, 85, 85, 0.5)'; // 半透明讓線條更柔和\n                ctx.strokeRect(screenX, screenY, cellSize, cellSize);\n            }\n            \n            // 繪製牆壁和門\n            if (y >= 0 && y < grid.length && x >= 0 && x < grid[0].length) {\n                if (grid[y][x] === 'wall') {\n                    ctx.fillStyle = '#666';\n                    ctx.fillRect(screenX, screenY, cellSize, cellSize);\n                } else if (grid[y][x] === 'door') {\n                    ctx.fillStyle = '#8b4513';\n                    ctx.fillRect(screenX, screenY, cellSize, cellSize);\n                }\n            }\n        }\n    }\n    \n    // 恢復繪圖狀態\n    ctx.restore();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1303,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 18,
+      "x": 1391.582494719091,
+      "y": -4957.863922247276,
+      "title": "drawPlayerVision",
+      "content": "function drawPlayerVision(player) {\n    const centerX = (player.x - cameraOffset.x) * cellSize;\n    const centerY = (player.y - cameraOffset.y) * cellSize;\n    const radius = visionRange * cellSize;\n    const innerRadius = (visionRange / 3) * cellSize;\n    \n    ctx.save();\n    \n    drawInnerGreenCircle(centerX, centerY, innerRadius);\n    drawVisionCone(player, centerX, centerY, innerRadius, radius);\n    drawFeatheredEdges(player, centerX, centerY, radius);\n    \n    ctx.restore();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawInnerGreenCircle",
+        "drawVisionCone",
+        "drawFeatheredEdges"
+      ],
+      "metadata": {
+        "contentLength": 486,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 19,
+      "x": 1400.013272339091,
+      "y": -4649.455043877275,
+      "title": "drawTerrainOnly",
+      "content": "function drawTerrainOnly(minX, maxX, minY, maxY) {\n    for (let y = minY; y < maxY; y++) {\n        for (let x = minX; x < maxX; x++) {\n            const screenX = (x - cameraOffset.x) * cellSize;\n            const screenY = (y - cameraOffset.y) * cellSize;\n            \n            // 只繪製牆壁和門\n            if (y >= 0 && y < gridSize && x >= 0 && x < gridSize) {\n                if (grid[y][x] === 'wall') {\n                    ctx.fillStyle = '#666';\n                    ctx.fillRect(screenX, screenY, cellSize, cellSize);\n                } else if (grid[y][x] === 'door') {\n                    ctx.fillStyle = '#8b4513';\n                    ctx.fillRect(screenX, screenY, cellSize, cellSize);\n                }\n            }\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 742,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 20,
+      "x": 1395.3022968690907,
+      "y": -4418.697816717275,
+      "title": "drawTeleportsInView",
+      "content": "function drawTeleportsInView(minX, maxX, minY, maxY) {\n    teleports.forEach(tp => {\n        if (tp.x >= minX && tp.x < maxX && tp.y >= minY && tp.y < maxY) {\n            const screenX = (tp.x - cameraOffset.x) * cellSize;\n            const screenY = (tp.y - cameraOffset.y) * cellSize;\n            \n            // 繪製傳送點外圈\n            ctx.fillStyle = tp.color;\n            ctx.globalAlpha = 0.9;\n            ctx.beginPath();\n            ctx.arc(\n                screenX + cellSize/2, \n                screenY + cellSize/2, \n                cellSize * 0.45, 0, Math.PI * 2\n            );\n            ctx.fill();\n            \n            // 繪製內圈\n            ctx.fillStyle = lightenColor(tp.color, 20);\n            ctx.beginPath();\n            ctx.arc(\n                screenX + cellSize/2, \n                screenY + cellSize/2, \n                cellSize * 0.35, 0, Math.PI * 2\n            );\n            ctx.fill();\n            \n            ctx.globalAlpha = 1.0;\n\n            // 繪製A/B標記\n            ctx.fillStyle = '#000';\n            ctx.font = 'bold ' + (cellSize * 0.5) + 'px Arial';\n            ctx.textAlign = 'center';\n            ctx.textBaseline = 'middle';\n            ctx.fillText(\n                tp.isA ? 'A' : 'B', \n                screenX + cellSize/2, \n                screenY + cellSize/2\n            );\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1339,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 21,
+      "x": 1399.8822832990911,
+      "y": -4211.538319807276,
+      "title": "drawWindowsInView",
+      "content": "function drawWindowsInView(minX, maxX, minY, maxY) {\n    windows.forEach(win => {\n        const winX = Math.floor(win.x);\n        const winY = Math.floor(win.y);\n        \n        if (winX >= minX && winX < maxX && winY >= minY && winY < maxY) {\n            const screenX = (winX - cameraOffset.x) * cellSize;\n            const screenY = (winY - cameraOffset.y) * cellSize;\n            \n            ctx.fillStyle = 'rgba(0, 150, 255, 0.7)';\n            ctx.fillRect(screenX, screenY, cellSize, cellSize);\n            \n            // 被撞擊效果\n            if (Date.now() - win.lastHitTime < 1000) {\n                ctx.strokeStyle = 'rgba(255,255,255,0.8)';\n                ctx.lineWidth = 2;\n                for (let i = 0; i < 3; i++) {\n                    ctx.beginPath();\n                    ctx.moveTo(\n                        screenX + Math.random() * cellSize,\n                        screenY + Math.random() * cellSize\n                    );\n                    ctx.lineTo(\n                        screenX + Math.random() * cellSize,\n                        screenY + Math.random() * cellSize\n                    );\n                    ctx.stroke();\n                }\n            }\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1203,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 22,
+      "x": 1402.3989444890913,
+      "y": -4011.6965017072753,
+      "title": "drawPlayersInView",
+      "content": "function drawPlayersInView(minX, maxX, minY, maxY) {\n    players.forEach((player, index) => {\n        if (player.alive) {\n            const playerX = Math.floor(player.x);\n            const playerY = Math.floor(player.y);\n            \n            if (playerX >= minX && playerX < maxX && \n                playerY >= minY && playerY < maxY) {\n                const screenX = (player.x - cameraOffset.x) * cellSize;\n                const screenY = (player.y - cameraOffset.y) * cellSize;\n                drawSinglePlayer(player, screenX, screenY, index);\n            }\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawSinglePlayer"
+      ],
+      "metadata": {
+        "contentLength": 586,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 23,
+      "x": 1388.085360919091,
+      "y": -3817.536495277275,
+      "title": "drawDefenseAreasInView",
+      "content": "function drawDefenseAreasInView(minX, maxX, minY, maxY) {\n    defenseAreas.forEach(area => {\n        const areaRight = area.x + area.width;\n        const areaBottom = area.y + area.height;\n        \n        if (areaRight >= minX && area.x <= maxX && \n            areaBottom >= minY && area.y <= maxY) {\n            \n            const drawX = Math.max(area.x, minX);\n            const drawY = Math.max(area.y, minY);\n            const drawRight = Math.min(areaRight, maxX);\n            const drawBottom = Math.min(areaBottom, maxY);\n            \n            const screenX = (drawX - cameraOffset.x) * cellSize;\n            const screenY = (drawY - cameraOffset.y) * cellSize;\n            const width = (drawRight - drawX) * cellSize;\n            const height = (drawBottom - drawY) * cellSize;\n            \n            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';\n            ctx.fillRect(screenX, screenY, width, height);\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 937,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 24,
+      "x": 1384.342481909091,
+      "y": -3625.861192727275,
+      "title": "drawEnemiesInView",
+      "content": "function drawEnemiesInView(minX, maxX, minY, maxY) {\n    if (shouldSkipDrawing()) return;\n    \n    const player = players[currentPlayerIndex];\n    \n    enemies.forEach(enemy => {\n        const screenPos = calculateScreenPosition(enemy);\n        \n        if (isEnemyOnScreen(screenPos)) {\n            if (shouldDrawEnemy(player, enemy)) {\n                drawSingleEnemy(enemy, screenPos, player);\n            }\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawSingleEnemy"
+      ],
+      "metadata": {
+        "contentLength": 430,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 25,
+      "x": 1377.7480560909094,
+      "y": -3425.307569545457,
+      "title": "drawBulletsInView",
+      "content": "function drawBulletsInView(minX, maxX, minY, maxY) {\n    bullets.forEach(bullet => {\n        const screenX = (bullet.x - cameraOffset.x) * cellSize;\n        const screenY = (bullet.y - cameraOffset.y) * cellSize;\n        \n        if (screenX >= -cellSize && screenX <= canvas.width + cellSize &&\n            screenY >= -cellSize && screenY <= canvas.height + cellSize) {\n            ctx.fillStyle = '#f1c40f';\n            ctx.beginPath();\n            ctx.arc(screenX, screenY, cellSize / 4, 0, Math.PI * 2);\n            ctx.fill();\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 551,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 26,
+      "x": 1387.4403264545454,
+      "y": -3220.967232272729,
+      "title": "drawEnemyBulletsInView",
+      "content": "function drawEnemyBulletsInView(minX, maxX, minY, maxY) {\n    enemyBullets.forEach(bullet => {\n        const screenX = (bullet.x - cameraOffset.x) * cellSize;\n        const screenY = (bullet.y - cameraOffset.y) * cellSize;\n        \n        if (screenX >= -cellSize && screenX <= canvas.width + cellSize &&\n            screenY >= -cellSize && screenY <= canvas.height + cellSize) {\n            ctx.fillStyle = '#e67e22';\n            ctx.beginPath();\n            ctx.arc(screenX, screenY, cellSize / 4, 0, Math.PI * 2);\n            ctx.fill();\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 561,
+        "lastUpdated": "2025-06-22T10:58:00.111Z"
+      }
+    },
+    {
+      "id": 27,
+      "x": 1392.5560979999998,
+      "y": -2971.4554560000015,
+      "title": "drawGrenadeInView",
+      "content": "function drawGrenadeInView(minX, maxX, minY, maxY) {\n    const screenX = (grenade.x - cameraOffset.x) * cellSize;\n    const screenY = (grenade.y - cameraOffset.y) * cellSize;\n    \n    if (screenX >= -cellSize * 2 && screenX <= canvas.width + cellSize * 2 &&\n        screenY >= -cellSize * 2 && screenY <= canvas.height + cellSize * 2) {\n        ctx.fillStyle = '#27ae60';\n        ctx.beginPath();\n        ctx.arc(screenX, screenY, cellSize / 2, 0, Math.PI * 2);\n        ctx.fill();\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 489,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 28,
+      "x": 1384.011066909091,
+      "y": -2732.4913877272743,
+      "title": "drawLaserSightInView",
+      "content": "function drawLaserSightInView(player) {\n    const playerX = (player.x - cameraOffset.x) * cellSize;\n    const playerY = (player.y - cameraOffset.y) * cellSize;\n    \n    let weaponRange;\n    switch(player.weaponMode) {\n        case 1: weaponRange = bulletSettings.pistol.range * cellSize; break;\n        case 2: weaponRange = bulletSettings.auto.range * cellSize; break;\n        case 3: weaponRange = bulletSettings.shotgun.range * cellSize; break;\n    }\n\n    const dx = mouseX - playerX;\n    const dy = mouseY - playerY;\n    const distance = Math.sqrt(dx * dx + dy * dy);\n    \n    let endX = playerX;\n    let endY = playerY;\n    let hitWall = false;\n    \n    const steps = Math.max(Math.abs(dx), Math.abs(dy));\n    const xStep = dx / steps;\n    const yStep = dy / steps;\n    \n    for (let i = 0; i <= steps && !hitWall; i++) {\n        const testX = playerX + xStep * i;\n        const testY = playerY + yStep * i;\n        \n        const currentDist = Math.sqrt((testX - playerX) ** 2 + (testY - playerY) ** 2);\n        if (currentDist > weaponRange) break;\n        \n        const gridX = Math.floor((testX / cellSize) + cameraOffset.x);\n        const gridY = Math.floor((testY / cellSize) + cameraOffset.y);\n        \n        if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize) {\n            if (grid[gridY][gridX] === 'wall') {\n                hitWall = true;\n                endX = testX - xStep;\n                endY = testY - yStep;\n                break;\n            }\n        }\n        \n        endX = testX;\n        endY = testY;\n    }\n    \n    ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';\n    ctx.lineWidth = 1;\n    ctx.beginPath();\n    ctx.moveTo(playerX, playerY);\n    ctx.lineTo(endX, endY);\n    ctx.stroke();\n    \n    ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';\n    ctx.beginPath();\n    ctx.arc(endX, endY, 3, 0, Math.PI * 2);\n    ctx.fill();\n    \n    if (distance > weaponRange) {\n        ctx.strokeStyle = 'rgba(255, 100, 100, 0.5)';\n        ctx.setLineDash([3, 3]);\n        ctx.beginPath();\n        ctx.arc(playerX, playerY, weaponRange, player.angle - Math.PI/8, player.angle + Math.PI/8);\n        ctx.stroke();\n        ctx.setLineDash([]);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2173,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 29,
+      "x": 1723.582494719091,
+      "y": -5222.863922247276,
+      "title": "drawInnerGreenCircle",
+      "content": "function drawInnerGreenCircle(centerX, centerY, innerRadius) {\n    ctx.globalAlpha = 0.1;\n    ctx.fillStyle = '#2ecc71';\n    ctx.beginPath();\n    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);\n    ctx.fill();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 219,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 30,
+      "x": 1724.582494719091,
+      "y": -5036.863922247276,
+      "title": "drawVisionCone",
+      "content": "function drawVisionCone(player, centerX, centerY, innerRadius, radius) {\n    const gradient = createVisionConeGradient(ctx, centerX, centerY, innerRadius, radius);\n    \n    ctx.globalAlpha = 1;\n    ctx.fillStyle = gradient;\n    ctx.beginPath();\n    ctx.moveTo(centerX, centerY);\n    ctx.arc(centerX, centerY, radius, \n            player.angle - visionAngleRadians, \n            player.angle + visionAngleRadians);\n    ctx.closePath();\n    ctx.fill();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createVisionConeGradient"
+      ],
+      "metadata": {
+        "contentLength": 452,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 31,
+      "x": 1720.582494719091,
+      "y": -4852.863922247276,
+      "title": "drawFeatheredEdges",
+      "content": "function drawFeatheredEdges(player, centerX, centerY, radius) {\n    const featherWidth = radius * 0.25;\n    const angleSteps = 15;\n    const angleStep = (visionAngleRadians * 2) / angleSteps;\n    \n    for (let i = 0; i <= angleSteps; i++) {\n        const angle = player.angle - visionAngleRadians + i * angleStep;\n        drawFeatheredEdgeLine(ctx, centerX, centerY, radius, featherWidth, angle);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawFeatheredEdgeLine"
+      ],
+      "metadata": {
+        "contentLength": 404,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 32,
+      "x": 1751.3989444890913,
+      "y": -4026.6965017072753,
+      "title": "drawSinglePlayer",
+      "content": "function drawSinglePlayer(player, screenX, screenY, index) {\n\n\n    ctx.save();\n    ctx.translate(screenX, screenY);\n    \n    // 設置玩家顏色\n    if (player.isCompanion) {\n        ctx.fillStyle = '#9b59b6'; // 同伴紫色\n    } else if (index === currentPlayerIndex) {\n        ctx.fillStyle = '#3498db'; // 當前玩家藍色\n    } else {\n        ctx.fillStyle = '#5dade2'; // 其他玩家淺藍色\n    }\n    \n    // 繪製玩家圓形\n    ctx.beginPath();\n    ctx.arc(0, 0, cellSize / 2, 0, Math.PI * 2);\n    ctx.fill();\n    \n    // 繪製武器方向\n    ctx.strokeStyle = '#ecf0f1';\n    ctx.lineWidth = 2;\n    ctx.beginPath();\n    ctx.moveTo(0, 0);\n    ctx.lineTo(\n    Math.cos(player.angle) * cellSize / 2,\n    Math.sin(player.angle) * cellSize / 2\n);\n    ctx.stroke();\n    \n    ctx.restore();\n    \n    // 只有當前玩家才顯示名稱和彈藥信息\n    if (index === currentPlayerIndex) {\n    // 繪製玩家標記（白色，半透明）\n    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // 70% 不透明\n    ctx.font = 'bold 12px Arial';\n    ctx.textAlign = 'center';\n    ctx.fillText(`P${index+1}`, screenX, screenY - 25);\n\n    // 繪製彈藥信息（橙色，半透明）\n    const ammoText = `${player.ammo}|${player.totalAmmo}|${player.grenadeCount}`;\n    ctx.fillStyle = 'rgba(241, 196, 15, 0.7)'; // 橙色 (#f1c40f)，70% 不透明\n    ctx.font = 'bold 12px Arial';\n    ctx.textAlign = 'center';\n    ctx.fillText(ammoText, screenX, screenY - 10);\n\n    // 繪製體力圈（半透明綠/紅）\n    const staminaX = screenX + 30;\n    const staminaY = screenY - 10;\n    \n    const staminaAngle = (player.stamina / 100) * Math.PI * 2;\n    ctx.beginPath();\n    ctx.arc(staminaX, staminaY, 4, -Math.PI/2, -Math.PI/2 + staminaAngle);\n    ctx.lineWidth = 4;\n        // 根據不同狀態設置顏色\n    if (player.isSprinting) {\n        // 衝刺模式 - 紅色\n        ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)'; // 紅 (#e74c3c)\n    } else if (player.isSlowWalking) {\n        // 慢速模式 - 藍色\n        ctx.strokeStyle = 'rgba(52, 152, 219, 0.7)'; // 藍 (#3498db)\n    } else if (player.stamina > 20) {\n        // 正常模式 - 綠色\n        ctx.strokeStyle = 'rgba(46, 204, 113, 0.7)'; // 綠 (#2ecc71)\n    } else {\n        // 體力不足 - 黃色\n        ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)'; // 黃 (#f1c40f)\n    }\n    ctx.stroke();\n    // 綠圈（半透明）或紅圈（半透明）\n    if (player.stamina > 20) {\n        ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)'; // 半透明綠 (#2ecc71)\n    } else {\n        ctx.strokeStyle = 'rgba(231, 76, 60, 0.5)';  // 半透明紅 (#e74c3c)\n    }\n    ctx.stroke();\n}\n    \n    // 繪製生命值條（保持原位置）\n    if (player.health < 100) {\n        drawPlayerHealthBar(player, screenX, screenY);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawPlayerHealthBar"
+      ],
+      "metadata": {
+        "contentLength": 2449,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 33,
+      "x": 2069.3989444890913,
+      "y": -4026.6965017072753,
+      "title": "drawPlayerHealthBar",
+      "content": "function drawPlayerHealthBar(player, screenX, screenY) {\n    const barWidth = cellSize;\n    const barHeight = 4;\n    const barX = screenX - barWidth / 2;\n    const barY = screenY + cellSize / 2 + 2;\n    \n    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';\n    ctx.fillRect(barX, barY, barWidth, barHeight);\n    \n    ctx.fillStyle = player.health > 50 ? '#2ecc71' : \n                  player.health > 25 ? '#f39c12' : '#e74c3c';\n    ctx.fillRect(barX, barY, barWidth * (player.health / 100), barHeight);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 494,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 34,
+      "x": 1724.342481909091,
+      "y": -3655.861192727275,
+      "title": "drawSingleEnemy",
+      "content": "function drawSingleEnemy(enemy, screenPos, player) {\n    if (enemy.type === ENEMY_TYPES.LICKER) {\n        drawLicker(enemy, screenPos.x, screenPos.y);\n    } else {\n        drawRegularEnemy(enemy, screenPos, player);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawLicker",
+        "drawRegularEnemy"
+      ],
+      "metadata": {
+        "contentLength": 223,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 35,
+      "x": 2074.342481909091,
+      "y": -3794.861192727275,
+      "title": "drawLicker",
+      "content": "function drawLicker(enemy, screenX, screenY) {\n    // 保存當前繪圖狀態\n    ctx.save();\n    \n    // 移動到繪製位置（中心點）\n    ctx.translate(screenX + cellSize/2, screenY + cellSize/2);\n    \n    // 設置 Licker 顏色（暗紅色）\n    ctx.fillStyle = '#8B0000';\n    ctx.strokeStyle = '#FF6347';\n    ctx.lineWidth = 2;\n    \n    // 繪製三角形身體（尖端朝上）\n    const size = cellSize * 0.8;\n    ctx.beginPath();\n    ctx.moveTo(0, -size/2);          // 頂點\n    ctx.lineTo(-size/2, size/2);     // 左下\n    ctx.lineTo(size/2, size/2);      // 右下\n    ctx.closePath();\n    ctx.fill();\n    ctx.stroke();\n    \n    // 恢復繪圖狀態\n    ctx.restore();\n    \n    // 繪製舌頭（如果正在攻擊）\n    if (enemy.tongue) {\n        drawTongueAttack(enemy);\n    }\n    \n    // 繪製調試信息（如果需要）\n    \n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawTongueAttack"
+      ],
+      "metadata": {
+        "contentLength": 705,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 36,
+      "x": 2073.342481909091,
+      "y": -3609.861192727275,
+      "title": "drawRegularEnemy",
+      "content": "function drawRegularEnemy(enemy, screenPos, player) {\n    const isZombie = (enemy.type === 'zombie');\n    const enemyColor = getEnemyColor(enemy, player, isZombie);\n    \n    // 繪製敵人身體\n    ctx.fillStyle = enemyColor;\n    ctx.beginPath();\n    ctx.arc(screenPos.x, screenPos.y, cellSize / 2, 0, Math.PI * 2);\n    ctx.fill();\n\n    if (!isZombie) {\n        drawEnemyVisionCone(enemy, screenPos);\n        drawEnemyDirectionLine(enemy, screenPos);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getEnemyColor",
+        "drawEnemyVisionCone",
+        "drawEnemyDirectionLine"
+      ],
+      "metadata": {
+        "contentLength": 448,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 37,
+      "x": 2360.342481909091,
+      "y": -3805.861192727275,
+      "title": "drawTongueAttack",
+      "content": "function drawTongueAttack(licker) {\n    const tongue = licker.tongue;\n    const startX = (licker.x - cameraOffset.x) * cellSize + cellSize/2;\n    const startY = (licker.y - cameraOffset.y) * cellSize + cellSize/2;\n    \n    let endX, endY;\n    if (tongue.pulling) {\n        // 拉回階段：連接Licker和玩家\n        endX = (tongue.target.x - cameraOffset.x) * cellSize + cellSize/2;\n        endY = (tongue.target.y - cameraOffset.y) * cellSize + cellSize/2;\n    } else {\n        // 伸出階段：動畫效果\n        endX = lerp(\n            startX, \n            (tongue.target.x - cameraOffset.x) * cellSize + cellSize/2, \n            tongue.progress\n        );\n        endY = lerp(\n            startY, \n            (tongue.target.y - cameraOffset.y) * cellSize + cellSize/2, \n            tongue.progress\n        );\n    }\n    // 繪製舌頭線條\n    ctx.strokeStyle = 'rgba(255, 105, 180, 0.8)';\n    ctx.lineWidth = 3;\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.stroke();\n\n    // 繪製舌頭尖端\n    ctx.fillStyle = 'rgba(255, 20, 147, 0.8)';\n    ctx.beginPath();\n    ctx.arc(endX, endY, 5, 0, Math.PI * 2);\n    ctx.fill();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "lerp"
+      ],
+      "metadata": {
+        "contentLength": 1121,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 38,
+      "x": 2640.3424819090915,
+      "y": -3812.861192727275,
+      "title": "lerp",
+      "content": "function lerp(start, end, t) {\n    return start * (1 - t) + end * t;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 70,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 39,
+      "x": 2388.342481909091,
+      "y": -3613.861192727275,
+      "title": "getEnemyColor",
+      "content": "function getEnemyColor(enemy, player, isZombie) {\n    if (!isZombie) return '#e74c3c';\n    \n    const isVisible = isInPlayerVision(player, enemy.x, enemy.y);\n    const isActive = enemy.path?.length > 0 || \n                    (enemy.targetPlayer && hasLineOfSight(enemy.x, enemy.y, enemy.targetPlayer.x, enemy.targetPlayer.y, true));\n    \n    enemy.isActive = isActive; // 存儲活動狀態用於調試\n    \n    if (testMode) {\n        let color = isActive ? '#2ecc71' : '#27ae60';\n        if (!isVisible) color += '80'; // 50% 透明度\n        return color;\n    }\n    \n    return '#2ecc71';\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "isInPlayerVision",
+        "hasLineOfSight"
+      ],
+      "metadata": {
+        "contentLength": 569,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 40,
+      "x": 2390.342481909091,
+      "y": -3383.861192727275,
+      "title": "drawEnemyVisionCone",
+      "content": "function drawEnemyVisionCone(enemy, screenPos) {\n    const alpha = testMode ? 0.15 : 0.3;\n    ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;\n    ctx.beginPath();\n    ctx.moveTo(screenPos.x, screenPos.y);\n    ctx.arc(\n        screenPos.x, screenPos.y,\n        enemyVisionRange * cellSize,\n        enemy.angle - enemyVisionAngle/2,\n        enemy.angle + enemyVisionAngle/2\n    );\n    ctx.closePath();\n    ctx.fill();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 416,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 41,
+      "x": 2387.342481909091,
+      "y": -3190.861192727275,
+      "title": "drawEnemyDirectionLine",
+      "content": "function drawEnemyDirectionLine(enemy, screenPos) {\n    ctx.strokeStyle = '#ecf0f1';\n    ctx.lineWidth = 2;\n    ctx.beginPath();\n    ctx.moveTo(screenPos.x, screenPos.y);\n    ctx.lineTo(\n        screenPos.x + Math.cos(enemy.angle) * cellSize / 2,\n        screenPos.y + Math.sin(enemy.angle) * cellSize / 2\n    );\n    ctx.stroke();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 332,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 42,
+      "x": 2740.3424819090915,
+      "y": -3616.861192727275,
+      "title": "isInPlayerVision",
+      "content": "function isInPlayerVision(player, targetX, targetY) {\n    // 計算目標與玩家的距離\n    const dx = targetX - player.x;\n    const dy = targetY - player.y;\n    const distance = Math.sqrt(dx * dx + dy * dy);\n    \n    // 如果目標在1/3半徑範圍內，直接返回true\n    const innerRadius = visionRange / 3;\n    if (distance <= innerRadius) return true;\n    \n    // 如果超出視覺範圍半徑，直接返回false\n    if (distance > visionRange) return false;\n    \n    // 計算目標相對於玩家的角度\n    let angleToTarget = Math.atan2(dy, dx);\n    \n    // 調整角度使其與玩家角度在同一範圍內\n    while (angleToTarget - player.angle > Math.PI) angleToTarget -= Math.PI * 2;\n    while (angleToTarget - player.angle < -Math.PI) angleToTarget += Math.PI * 2;\n    \n    // 檢查是否在視角範圍內\n    if (Math.abs(angleToTarget - player.angle) > visionAngleRadians) return false;\n    \n    // 檢查是否有牆壁阻擋視線\n    return hasLineOfSight(player.x, player.y, targetX, targetY);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "hasLineOfSight"
+      ],
+      "metadata": {
+        "contentLength": 852,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 43,
+      "x": 2746.3424819090915,
+      "y": -3415.861192727275,
+      "title": "hasLineOfSight",
+      "content": "function hasLineOfSight(x1, y1, x2, y2, ignoreDoors = false) {\n    const dx = x2 - x1;\n    const dy = y2 - y1;\n    const steps = Math.max(Math.abs(dx), Math.abs(dy)) * 2;\n    const xIncrement = dx / steps;\n    const yIncrement = dy / steps;\n    \n    let x = x1;\n    let y = y1;\n    \n    for (let i = 0; i <= steps; i++) {\n        const gridX = Math.floor(x);\n        const gridY = Math.floor(y);\n        \n        if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) {\n            return false;\n        }\n        \n        // 窗戶會部分阻擋視線（50%概率阻斷）\n        const windowHere = windows.find(w => \n            Math.floor(w.x) === gridX && \n            Math.floor(w.y) === gridY\n        );\n        if (windowHere && Math.random() < 0.5) {\n            return false;\n        }\n        \n        // 牆壁和門檢查\n        if (grid[gridY][gridX] === 'wall' || (!ignoreDoors && grid[gridY][gridX] === 'door')) {\n            return false;\n        }\n        \n        x += xIncrement;\n        y += yIncrement;\n    }\n    \n    return true;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1029,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 44,
+      "x": 3036.1606637272735,
+      "y": -3611.043010909093,
+      "title": "hasLineOfSight",
+      "content": "function hasLineOfSight(x1, y1, x2, y2, ignoreDoors = false) {\n    const dx = x2 - x1;\n    const dy = y2 - y1;\n    const steps = Math.max(Math.abs(dx), Math.abs(dy)) * 2;\n    const xIncrement = dx / steps;\n    const yIncrement = dy / steps;\n    \n    let x = x1;\n    let y = y1;\n    \n    for (let i = 0; i <= steps; i++) {\n        const gridX = Math.floor(x);\n        const gridY = Math.floor(y);\n        \n        if (gridX < 0 || gridX >= gridSize || gridY < 0 || gridY >= gridSize) {\n            return false;\n        }\n        \n        // 窗戶會部分阻擋視線（50%概率阻斷）\n        const windowHere = windows.find(w => \n            Math.floor(w.x) === gridX && \n            Math.floor(w.y) === gridY\n        );\n        if (windowHere && Math.random() < 0.5) {\n            return false;\n        }\n        \n        // 牆壁和門檢查\n        if (grid[gridY][gridX] === 'wall' || (!ignoreDoors && grid[gridY][gridX] === 'door')) {\n            return false;\n        }\n        \n        x += xIncrement;\n        y += yIncrement;\n    }\n    \n    return true;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1029,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 45,
+      "x": 1450.9013050000003,
+      "y": -2476.871429000001,
+      "title": "drawBackgroundImage",
+      "content": "function drawBackgroundImage() {\n    if (gameState === 'setup' && backgroundImage.img) {\n        ctx.globalAlpha = 0.5; // Semi-transparent\n        ctx.drawImage(\n            backgroundImage.img,\n            backgroundImage.x * cellSize,\n            backgroundImage.y * cellSize,\n            backgroundImage.width * cellSize,\n            backgroundImage.height * cellSize\n        );\n        ctx.globalAlpha = 1.0; // Reset opacity\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 438,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 46,
+      "x": 1453.1013050000001,
+      "y": -2292.071429000001,
+      "title": "drawGridLines",
+      "content": "function drawGridLines() {\n    if (gameState === 'setup') {\n        // 繪製網格線（僅在設置模式）\n        ctx.strokeStyle = '#555';\n        ctx.lineWidth = 0.5;\n        \n        // 水平線\n        for (let i = 0; i <= gridSize; i++) {\n            ctx.beginPath();\n            ctx.moveTo(0, i * cellSize);\n            ctx.lineTo(gridSize * cellSize, i * cellSize);\n            ctx.stroke();\n        }\n        \n        // 垂直線\n        for (let i = 0; i <= gridSize; i++) {\n            ctx.beginPath();\n            ctx.moveTo(i * cellSize, 0);\n            ctx.lineTo(i * cellSize, gridSize * cellSize);\n            ctx.stroke();\n        }\n    }\n\n    // 繪製所有傳送點\n    teleports.forEach(tp => {\n        const screenX = (tp.x + 0.5) * cellSize;\n        const screenY = (tp.y + 0.5) * cellSize;\n        const radius = cellSize * 0.45;\n        \n        // 設置透明度（遊戲模式更鮮豔）\n        const alpha = gameState === 'playing' ? 0.9 : 0.6;\n        ctx.globalAlpha = alpha;\n        \n        // 繪製外圈\n        ctx.fillStyle = tp.color;\n        ctx.beginPath();\n        ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);\n        ctx.fill();\n        \n        // 繪製內圈（立體效果）\n        ctx.fillStyle = lightenColor(tp.color, 20);\n        ctx.beginPath();\n        ctx.arc(screenX, screenY, radius * 0.78, 0, Math.PI * 2);\n        ctx.fill();\n        \n        // 重置透明度\n        ctx.globalAlpha = 1.0;\n        \n        // 繪製組別標記\n        ctx.fillStyle = '#000';\n        ctx.font = `bold ${cellSize * 0.5}px Arial`;\n        ctx.textAlign = 'center';\n        ctx.textBaseline = 'middle';\n        \n        // 顯示組別和AB標記 (例如: \"3A\" 表示第3組的A點)\n        const groupNumber = tp.pairId + 1;\n        ctx.fillText(`${groupNumber}${tp.isA ? 'A' : 'B'}`, screenX, screenY);\n        \n        // 遊戲模式下添加脈動效果\n        if (gameState === 'playing') {\n            const pulse = 0.1 * Math.sin(Date.now() / 300);\n            ctx.strokeStyle = lightenColor(tp.color, 30);\n            ctx.lineWidth = 1 + pulse;\n            ctx.beginPath();\n            ctx.arc(screenX, screenY, radius * 1.2, 0, Math.PI * 2);\n            ctx.stroke();\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2075,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 47,
+      "x": 1449.8013050000002,
+      "y": -2105.0714290000014,
+      "title": "drawGridItems",
+      "content": "function drawGridItems() {\n\n\n    // 繪製傳送點（移動到這裡）\n    teleports.forEach(tp => {\n        const alpha = gameState === 'playing' ? 0.9 : 0.6;\n        ctx.fillStyle = tp.color;\n        ctx.globalAlpha = alpha;\n        \n        // 繪製傳送點外圈\n        ctx.beginPath();\n        ctx.arc(\n            (tp.x + 0.5) * cellSize, \n            (tp.y + 0.5) * cellSize, \n            cellSize * 0.45, 0, Math.PI * 2\n        );\n        ctx.fill();\n        \n        // 繪製內圈增加立體感\n        ctx.fillStyle = lightenColor(tp.color, 20);\n        ctx.beginPath();\n        ctx.arc(\n            (tp.x + 0.5) * cellSize, \n            (tp.y + 0.5) * cellSize, \n            cellSize * 0.35, 0, Math.PI * 2\n        );\n        ctx.fill();\n        \n        ctx.globalAlpha = 1.0;\n\n        // 繪製A/B標記\n        ctx.fillStyle = '#000';\n        ctx.font = 'bold ' + (cellSize * 0.5) + 'px Arial';\n        ctx.textAlign = 'center';\n        ctx.textBaseline = 'middle';\n        ctx.fillText(\n            tp.isA ? 'A' : 'B', \n            (tp.x + 0.5) * cellSize, \n            (tp.y + 0.5) * cellSize\n        );\n    });\n\n    // 繪製窗戶\n    windows.forEach(win => {\n        const alpha = win.health / 100 * 0.7; // 根據耐久度調整透明度\n        ctx.fillStyle = `rgba(0, 150, 255, ${alpha})`;\n        ctx.fillRect(win.x * cellSize, win.y * cellSize, cellSize, cellSize);\n        \n        // 被撞擊或射擊效果\n        if (Date.now() - win.lastHitTime < 300) { // 300毫秒內顯示效果\n            ctx.strokeStyle = `rgba(255, 50, 50, ${0.5 + (1 - win.health/100)})`;\n            ctx.lineWidth = 1 + (1 - win.health/100) * 3;\n            \n            // 繪製裂痕效果\n            for (let i = 0; i < 3 + win.bulletHits; i++) {\n                ctx.beginPath();\n                ctx.moveTo(\n                    win.x * cellSize + Math.random() * cellSize,\n                    win.y * cellSize + Math.random() * cellSize\n                );\n                ctx.lineTo(\n                    win.x * cellSize + Math.random() * cellSize,\n                    win.y * cellSize + Math.random() * cellSize\n                );\n                ctx.stroke();\n            }\n        }\n    });\n\n        // 繪製彈藥庫\n    drawAmmoDepots();\n    for (let i = 0; i < gridSize; i++) {\n        for (let j = 0; j < gridSize; j++) {\n            if (grid[i][j] === 'wall') {\n                ctx.fillStyle = '#666';\n                ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);\n            } else if (grid[i][j] === 'door') {\n                ctx.fillStyle = '#8b4513';\n                ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);\n            }\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawAmmoDepots"
+      ],
+      "metadata": {
+        "contentLength": 2566,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 48,
+      "x": 1753.4013050000003,
+      "y": -2123.7714290000013,
+      "title": "drawAmmoDepots",
+      "content": "function drawAmmoDepots() {\n    ammoDepots.forEach(depot => {\n        if (!depot.collected) {\n            drawAmmoDepot(depot);\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawAmmoDepot"
+      ],
+      "metadata": {
+        "contentLength": 147,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 49,
+      "x": 1457.5013050000002,
+      "y": -1910.3714290000012,
+      "title": "drawAllWindows",
+      "content": "function drawAllWindows() {\n    windows.forEach(win => drawWindow(win));\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 74,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 50,
+      "x": 1452.0013050000002,
+      "y": -1714.571429000001,
+      "title": "drawAmmoDepots",
+      "content": "function drawAmmoDepots() {\n    ammoDepots.forEach(depot => {\n        if (!depot.collected) {\n            drawAmmoDepot(depot);\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawAmmoDepot"
+      ],
+      "metadata": {
+        "contentLength": 147,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 51,
+      "x": 1452.0013050000002,
+      "y": -1517.671429000001,
+      "title": "drawAllTeleports",
+      "content": "function drawAllTeleports() {\n    teleports.forEach(tp => drawTeleport(tp));\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 78,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 52,
+      "x": 1452.0013050000002,
+      "y": -1322.971429000001,
+      "title": "drawDefenseAreas",
+      "content": "function drawDefenseAreas() {\n    if (gameState === 'setup') {\n        defenseAreas.forEach(area => {\n            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';\n            ctx.fillRect(area.x * cellSize, area.y * cellSize, area.width * cellSize, area.height * cellSize);\n        });\n\n        if (currentDefenseArea) {\n            const rect = getRectCoords(currentDefenseArea);\n            ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';\n            ctx.fillRect(rect.x * cellSize, rect.y * cellSize, rect.width * cellSize, rect.height * cellSize);\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getRectCoords"
+      ],
+      "metadata": {
+        "contentLength": 556,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 53,
+      "x": 1757.8013050000002,
+      "y": -1339.471429000001,
+      "title": "getRectCoords",
+      "content": "function getRectCoords(start = rectStart) {\n            if (!start) return { x: 0, y: 0, width: 0, height: 0 };\n            const x1 = Math.min(start.x, start.currentX);\n            const y1 = Math.min(start.y, start.currentY);\n            const x2 = Math.max(start.x, start.currentX);\n            const y2 = Math.max(start.y, start.currentY);\n            return {\n                x: x1,\n                y: y1,\n                width: x2 - x1 + 1,\n                height: y2 - y1 + 1\n            };\n        }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 507,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 54,
+      "x": 1450.901305,
+      "y": -1131.5714290000008,
+      "title": "drawEnemyPaths",
+      "content": "function drawEnemyPaths() {\n    if (gameState === 'setup' && settingEnemyPath) {\n        enemies.forEach(enemy => {\n            if (enemy.path && enemy.path.length > 1) {\n                ctx.beginPath();\n                ctx.strokeStyle = enemy === currentPathEnemy ? '#FF00FF' : 'rgba(255,0,255,0.3)';\n                ctx.lineWidth = enemy === currentPathEnemy ? 3 : 1;\n                ctx.moveTo(enemy.path[0].x * cellSize + cellSize / 2, enemy.path[0].y * cellSize + cellSize / 2);\n                for (let i = 1; i < enemy.path.length; i++) {\n                    ctx.lineTo(enemy.path[i].x * cellSize + cellSize / 2, enemy.path[i].y * cellSize + cellSize / 2);\n                }\n                ctx.stroke();\n\n                enemy.path.forEach((point, index) => {\n                    ctx.fillStyle = index === 0 ? '#00ff00' : (index === enemy.path.length - 1 ? '#ff0000' : '#ffff00');\n                    ctx.beginPath();\n                    ctx.arc(point.x * cellSize + cellSize / 2, point.y * cellSize + cellSize / 2, cellSize / 3, 0, Math.PI * 2);\n                    ctx.fill();\n                    ctx.strokeStyle = '#000';\n                    ctx.lineWidth = 1;\n                    ctx.stroke();\n                });\n\n                if (enemy.isBeingEdited) {\n                    ctx.fillStyle = '#FFFF00';\n                    ctx.beginPath();\n                    ctx.arc(enemy.x * cellSize, enemy.y * cellSize - 15, 5, 0, Math.PI * 2);\n                    ctx.fill();\n                }\n            }\n        });\n\n        if (enemyPathPoints.length > 0) {\n            enemyPathPoints.forEach((point, index) => {\n                ctx.fillStyle = index === 0 ? '#00ff00' : (index === enemyPathPoints.length - 1 ? '#ff0000' : '#ffff00');\n                ctx.beginPath();\n                ctx.arc(point.x * cellSize + cellSize / 2, point.y * cellSize + cellSize / 2, cellSize / 3, 0, Math.PI * 2);\n                ctx.fill();\n                ctx.strokeStyle = '#000';\n                ctx.lineWidth = 1;\n                ctx.stroke();\n            });\n\n            if (enemyPathPoints.length > 1) {\n                ctx.beginPath();\n                ctx.strokeStyle = enemy === currentPathEnemy ? '#FF00FF' : 'rgba(255,0,255,0.3)';\n                ctx.lineWidth = enemy === currentPathEnemy ? 3 : 1;\n                ctx.moveTo(enemyPathPoints[0].x * cellSize + cellSize / 2, enemyPathPoints[0].y * cellSize + cellSize / 2);\n                for (let i = 1; i < enemyPathPoints.length; i++) {\n                    ctx.lineTo(enemyPathPoints[i].x * cellSize + cellSize / 2, enemyPathPoints[i].y * cellSize + cellSize / 2);\n                }\n                ctx.stroke();\n            }\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2697,
+        "lastUpdated": "2025-06-22T10:58:00.112Z"
+      }
+    },
+    {
+      "id": 55,
+      "x": 1453.1013050000001,
+      "y": -946.7714290000011,
+      "title": "drawPlayers",
+      "content": "function drawPlayers() {\n    const currentPlayer = players[currentPlayerIndex];\n    \n    // 只在遊戲模式計算攝像機偏移\n    if (!isEditMode && currentPlayer && currentPlayer.alive) {\n        cameraOffset.x = currentPlayer.x - viewportWidth / 2;\n        cameraOffset.y = currentPlayer.y - viewportHeight / 2;\n    }\n\n    players.forEach((player, index) => {\n        if (!player.alive) return;\n\n        // 在遊戲模式中，跳過當前玩家的原始位置繪製\n        if (!isEditMode && index === currentPlayerIndex) return;\n\n        let screenX, screenY;\n        \n        if (isEditMode) {\n            // 編輯模式：直接使用網格坐標\n            screenX = player.x * cellSize;\n            screenY = player.y * cellSize;\n        } else {\n            // 遊戲模式：只繪製同伴\n            if (!player.isCompanion) return;\n            \n            // 考慮攝像機偏移\n            screenX = (player.x - cameraOffset.x) * cellSize;\n            screenY = (player.y - cameraOffset.y) * cellSize;\n        }\n\n        // 確保坐標在合理範圍內\n        if (screenX < -cellSize || screenX > canvas.width + cellSize ||\n            screenY < -cellSize || screenY > canvas.height + cellSize) {\n            return;\n        }\n\n        // 繪製玩家（同伴或其他玩家）\n        ctx.save();\n        ctx.translate(screenX, screenY);\n        \n        // 設置玩家顏色\n        ctx.fillStyle = player.isCompanion ? '#9b59b6' : '#5dade2';\n        \n        // 繪製玩家身體\n        ctx.beginPath();\n        ctx.arc(0, 0, cellSize / 2, 0, Math.PI * 2);\n        ctx.fill();\n        \n        // 繪製武器方向\n        ctx.strokeStyle = '#ecf0f1';\n        ctx.lineWidth = 2;\n        ctx.beginPath();\n        ctx.moveTo(0, 0);\n        ctx.lineTo(\n            Math.cos(player.angle) * cellSize / 2, \n            Math.sin(player.angle) * cellSize / 2\n        );\n        ctx.stroke();\n        \n        ctx.restore();\n        \n        // 繪製同伴狀態標記\n        if (player.isCompanion) {\n            ctx.fillStyle = '#f1c40f';\n            ctx.font = 'bold 10px Arial';\n            ctx.textAlign = 'center';\n            ctx.fillText('同伴', screenX, screenY - 20);\n            \n            // 繪製目標標記\n            if (player.companionTarget) {\n                let targetX, targetY;\n                \n                if (isEditMode) {\n                    targetX = player.companionTarget.x * cellSize;\n                    targetY = player.companionTarget.y * cellSize;\n                } else {\n                    targetX = (player.companionTarget.x - cameraOffset.x) * cellSize;\n                    targetY = (player.companionTarget.y - cameraOffset.y) * cellSize;\n                }\n                \n                ctx.strokeStyle = '#f1c40f';\n                ctx.lineWidth = 1;\n                ctx.beginPath();\n                ctx.moveTo(screenX, screenY);\n                ctx.lineTo(targetX, targetY);\n                ctx.stroke();\n                \n                ctx.fillStyle = 'rgba(241, 196, 15, 0.3)';\n                ctx.beginPath();\n                ctx.arc(targetX, targetY, 5, 0, Math.PI * 2);\n                ctx.fill();\n            }\n        }\n        \n        // 繪製生命值條\n        if (player.health < 100) {\n            drawHealthBar(player, screenX, screenY);\n        }\n    });\n\n    // 單獨繪製當前玩家（在畫面中央）\n    if (!isEditMode && currentPlayer && currentPlayer.alive) {\n        ctx.save();\n        ctx.translate(canvas.width / 2, canvas.height / 2);\n        \n        // 繪製當前玩家\n        ctx.fillStyle = '#3498db';\n        ctx.beginPath();\n        ctx.arc(0, 0, cellSize / 2, 0, Math.PI * 2);\n        ctx.fill();\n        \n        // 繪製武器方向\n        ctx.strokeStyle = '#ecf0f1';\n        ctx.lineWidth = 2;\n        ctx.beginPath();\n        ctx.moveTo(0, 0);\n        ctx.lineTo(\n            Math.cos(currentPlayer.angle) * cellSize / 2, \n            Math.sin(currentPlayer.angle) * cellSize / 2\n        );\n        ctx.stroke();\n        \n        ctx.restore();\n        \n        // 繪製生命值條\n        if (currentPlayer.health < 100) {\n            drawHealthBar(currentPlayer, canvas.width / 2, canvas.height / 2);\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawHealthBar"
+      ],
+      "metadata": {
+        "contentLength": 3943,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 56,
+      "x": 1458.6013050000001,
+      "y": -749.871429000001,
+      "title": "drawEnemies",
+      "content": "function drawEnemies() {\n    enemies.forEach(enemy => {\n        // 繪製調試信息（僅測試模式）\n        if (testMode && enemy.path && enemy.path.length > 0) {\n            ctx.fillStyle = '#ffffff';\n            ctx.font = '10px Arial';\n            ctx.fillText(`Path: ${enemy.currentPathIndex || 0}/${enemy.path.length - 1}`, \n                        enemy.x * cellSize + 10, enemy.y * cellSize - 10);\n            \n            // 測試模式下顯示路徑點\n            ctx.fillStyle = '#00ff00';\n            ctx.beginPath();\n            ctx.arc(enemy.x * cellSize, enemy.y * cellSize - cellSize, cellSize / 4, 0, Math.PI * 2);\n            ctx.fill();\n        }\n\n        // 根據敵人類型繪製\n        if (enemy.type === ENEMY_TYPES.LICKER) {\n            // 使用統一的 Licker 繪製函數（不再繪製額外圓形）\n            drawLicker(enemy, enemy.x * cellSize, enemy.y * cellSize);\n        } \n        else {\n            // 其他敵人類型的繪製邏輯\n            ctx.fillStyle = enemy.type === 'zombie' ? '#2ecc71' : '#e74c3c';\n            ctx.beginPath();\n            ctx.arc(\n                enemy.x * cellSize, \n                enemy.y * cellSize, \n                cellSize / 2, \n                0, \n                Math.PI * 2\n            );\n            ctx.fill();\n\n            // 繪製路徑點（非設置路徑模式時）\n            if (enemy.path && enemy.path.length > 0 && !settingEnemyPath) {\n                ctx.fillStyle = '#00ff00';\n                ctx.beginPath();\n                ctx.arc(enemy.x * cellSize, enemy.y * cellSize - cellSize, cellSize / 4, 0, Math.PI * 2);\n                ctx.fill();\n            }\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawLicker"
+      ],
+      "metadata": {
+        "contentLength": 1536,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 57,
+      "x": 1454.201305,
+      "y": -559.5714290000008,
+      "title": "drawBullets",
+      "content": "function drawBullets() {\n    bullets.forEach(bullet => {\n        // 計算子彈在屏幕上的位置（考慮攝像機偏移）\n        const screenX = (bullet.x - cameraOffset.x) * cellSize;\n        const screenY = (bullet.y - cameraOffset.y) * cellSize;\n        \n        // 只在可見範圍內繪製\n        if (screenX >= -cellSize && screenX <= canvas.width + cellSize &&\n            screenY >= -cellSize && screenY <= canvas.height + cellSize) {\n            ctx.fillStyle = '#f1c40f';\n            ctx.beginPath();\n            ctx.arc(screenX, screenY, cellSize / 4, 0, Math.PI * 2);\n            ctx.fill();\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 576,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 58,
+      "x": 1452.0013050000002,
+      "y": -358.27142900000075,
+      "title": "drawEnemyBullets",
+      "content": "function drawEnemyBullets() {\n    enemyBullets.forEach(enemyBullet => {\n        ctx.fillStyle = '#e67e22';\n        ctx.beginPath();\n        ctx.arc(enemyBullet.x * cellSize, enemyBullet.y * cellSize, cellSize / 4, 0, Math.PI * 2);\n        ctx.fill();\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 260,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 59,
+      "x": 1454.833145,
+      "y": -168.35939900000042,
+      "title": "drawGrenade",
+      "content": "function drawGrenade() {\n    if (grenade && gameState === 'playing') {\n        ctx.fillStyle = '#27ae60';\n        ctx.beginPath();\n        if (grenade.thrown) {\n            ctx.arc(grenade.x * cellSize, grenade.y * cellSize, cellSize / 2, 0, Math.PI * 2);\n        } else {\n            ctx.arc(grenade.targetX * cellSize, grenade.targetY * cellSize, cellSize / 2, 0, Math.PI * 2);\n        }\n        ctx.fill();\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 417,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 60,
+      "x": 1754.5013050000002,
+      "y": -955.5714290000012,
+      "title": "drawHealthBar",
+      "content": "function drawHealthBar(player) {\n    const healthBarWidth = cellSize;\n    const healthBarHeight = 4;\n    const healthX = player.x * cellSize - healthBarWidth/2;\n    const healthY = player.y * cellSize + cellSize/2 + 2;\n    \n    // 背景\n    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';\n    ctx.fillRect(healthX, healthY, healthBarWidth, healthBarHeight);\n    \n    // 当前生命值\n    ctx.fillStyle = player.health > 50 ? '#2ecc71' : \n                  player.health > 25 ? '#f39c12' : '#e74c3c';\n    ctx.fillRect(\n        healthX, \n        healthY, \n        healthBarWidth * (player.health / 100), \n        healthBarHeight\n    );\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 614,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 61,
+      "x": 1749.0013050000002,
+      "y": -749.871429000001,
+      "title": "drawLicker",
+      "content": "function drawLicker(enemy, screenX, screenY) {\n    // 保存當前繪圖狀態\n    ctx.save();\n    \n    // 移動到繪製位置（中心點）\n    ctx.translate(screenX + cellSize/2, screenY + cellSize/2);\n    \n    // 設置 Licker 顏色（暗紅色）\n    ctx.fillStyle = '#8B0000';\n    ctx.strokeStyle = '#FF6347';\n    ctx.lineWidth = 2;\n    \n    // 繪製三角形身體（尖端朝上）\n    const size = cellSize * 0.8;\n    ctx.beginPath();\n    ctx.moveTo(0, -size/2);          // 頂點\n    ctx.lineTo(-size/2, size/2);     // 左下\n    ctx.lineTo(size/2, size/2);      // 右下\n    ctx.closePath();\n    ctx.fill();\n    ctx.stroke();\n    \n    // 恢復繪圖狀態\n    ctx.restore();\n    \n    // 繪製舌頭（如果正在攻擊）\n    if (enemy.tongue) {\n        drawTongueAttack(enemy);\n    }\n    \n    // 繪製調試信息（如果需要）\n    \n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawTongueAttack"
+      ],
+      "metadata": {
+        "contentLength": 705,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 62,
+      "x": 2025.101305,
+      "y": -772.971429000001,
+      "title": "drawTongueAttack",
+      "content": "function drawTongueAttack(licker) {\n    const tongue = licker.tongue;\n    const startX = (licker.x - cameraOffset.x) * cellSize + cellSize/2;\n    const startY = (licker.y - cameraOffset.y) * cellSize + cellSize/2;\n    \n    let endX, endY;\n    if (tongue.pulling) {\n        // 拉回階段：連接Licker和玩家\n        endX = (tongue.target.x - cameraOffset.x) * cellSize + cellSize/2;\n        endY = (tongue.target.y - cameraOffset.y) * cellSize + cellSize/2;\n    } else {\n        // 伸出階段：動畫效果\n        endX = lerp(\n            startX, \n            (tongue.target.x - cameraOffset.x) * cellSize + cellSize/2, \n            tongue.progress\n        );\n        endY = lerp(\n            startY, \n            (tongue.target.y - cameraOffset.y) * cellSize + cellSize/2, \n            tongue.progress\n        );\n    }\n    // 繪製舌頭線條\n    ctx.strokeStyle = 'rgba(255, 105, 180, 0.8)';\n    ctx.lineWidth = 3;\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.stroke();\n\n    // 繪製舌頭尖端\n    ctx.fillStyle = 'rgba(255, 20, 147, 0.8)';\n    ctx.beginPath();\n    ctx.arc(endX, endY, 5, 0, Math.PI * 2);\n    ctx.fill();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "lerp"
+      ],
+      "metadata": {
+        "contentLength": 1121,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 63,
+      "x": 2303.4013050000003,
+      "y": -763.071429000001,
+      "title": "lerp",
+      "content": "function lerp(start, end, t) {\n    return start * (1 - t) + end * t;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 70,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 64,
+      "x": 1458.1331450000002,
+      "y": 13.140600999999549,
+      "title": "drawRectWallPreview",
+      "content": "function drawRectWallPreview() {\n    if (gameState === 'setup' && currentPlacement === 'rectWall' && rectStart) {\n        const rect = getRectCoords();\n        ctx.strokeStyle = '#888';\n        ctx.strokeRect(rect.x * cellSize, rect.y * cellSize, rect.width * cellSize, rect.height * cellSize);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getRectCoords"
+      ],
+      "metadata": {
+        "contentLength": 302,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 65,
+      "x": 1457.0331449999999,
+      "y": 214.44060099999962,
+      "title": "drawRemovePreview",
+      "content": "function drawRemovePreview() {\n    if (gameState === 'setup' && currentPlacement === 'remove' && rectStart) {\n        const rect = getRectCoords();\n        ctx.strokeStyle = '#ff0000';\n        ctx.lineWidth = 2;\n        ctx.strokeRect(rect.x * cellSize, rect.y * cellSize, rect.width * cellSize, rect.height * cellSize);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getRectCoords"
+      ],
+      "metadata": {
+        "contentLength": 328,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 66,
+      "x": 1448.2331450000001,
+      "y": 401.44060099999973,
+      "title": "drawLineWallPreview",
+      "content": "function drawLineWallPreview() {\n    if (gameState === 'setup' && currentPlacement === 'lineWall' && rectStart) {\n        const cells = getLineCells(rectStart.x, rectStart.y, rectStart.currentX, rectStart.currentY);\n        ctx.fillStyle = 'rgba(102, 102, 102, 0.5)';\n        cells.forEach(cell => {\n            ctx.fillRect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);\n        });\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getLineCells"
+      ],
+      "metadata": {
+        "contentLength": 403,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 67,
+      "x": 1448.2331450000001,
+      "y": 590.6406009999997,
+      "title": "drawCurveWallPreview",
+      "content": "function drawCurveWallPreview() {\n    if (gameState === 'setup' && currentPlacement === 'curveWall' && rectStart) {\n        if (curveDrawingState === 'drawing_line') {\n            ctx.strokeStyle = 'rgba(102, 102, 102, 0.5)';\n            ctx.lineWidth = 2;\n            ctx.beginPath();\n            ctx.moveTo(rectStart.x * cellSize + cellSize / 2, rectStart.y * cellSize + cellSize / 2);\n            ctx.lineTo(rectStart.currentX * cellSize + cellSize / 2, rectStart.currentY * cellSize + cellSize / 2);\n            ctx.stroke();\n        } else if (curveDrawingState === 'adjusting_curve' && curveControlPoint) {\n            const cells = getCurveCells(rectStart.x, rectStart.y, curveControlPoint.x, curveControlPoint.y, rectStart.currentX, rectStart.currentY);\n            ctx.fillStyle = 'rgba(102, 102, 102, 0.5)';\n            cells.forEach(cell => {\n                ctx.fillRect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);\n            });\n            ctx.fillStyle = '#ff0000';\n            ctx.beginPath();\n            ctx.arc(curveControlPoint.x * cellSize + cellSize / 2, curveControlPoint.y * cellSize + cellSize / 2, cellSize / 4, 0, Math.PI * 2);\n            ctx.fill();\n        }\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getCurveCells"
+      ],
+      "metadata": {
+        "contentLength": 1212,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 68,
+      "x": 1439.433145,
+      "y": 795.2406009999997,
+      "title": "drawRemoveEntityPreview",
+      "content": "function drawRemoveEntityPreview() {\n    if (gameState === 'setup' && currentPlacement === 'removeEntity' && rectStart) {\n        const rect = getRectCoords();\n        ctx.strokeStyle = '#ff0000';\n        ctx.lineWidth = 2;\n        ctx.strokeRect(rect.x * cellSize, rect.y * cellSize, rect.width * cellSize, rect.height * cellSize);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "getRectCoords"
+      ],
+      "metadata": {
+        "contentLength": 340,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 69,
+      "x": 1774.9331450000002,
+      "y": 1.0406009999995263,
+      "title": "getRectCoords",
+      "content": "function getRectCoords(start = rectStart) {\n            if (!start) return { x: 0, y: 0, width: 0, height: 0 };\n            const x1 = Math.min(start.x, start.currentX);\n            const y1 = Math.min(start.y, start.currentY);\n            const x2 = Math.max(start.x, start.currentX);\n            const y2 = Math.max(start.y, start.currentY);\n            return {\n                x: x1,\n                y: y1,\n                width: x2 - x1 + 1,\n                height: y2 - y1 + 1\n            };\n        }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 507,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 70,
+      "x": 1789.2331450000001,
+      "y": 406.94060099999973,
+      "title": "getLineCells",
+      "content": "function getLineCells(x0, y0, x1, y1) {\n            const cells = [];\n            const dx = Math.abs(x1 - x0);\n            const dy = Math.abs(y1 - y0);\n            const sx = x0 < x1 ? 1 : -1;\n            const sy = y0 < y1 ? 1 : -1;\n            let err = dx - dy;\n            \n            while (true) {\n                cells.push({ x: x0, y: y0 });\n                if (x0 === x1 && y0 === y1) break;\n                const e2 = 2 * err;\n                if (e2 > -dy) {\n                    err -= dy;\n                    x0 += sx;\n                }\n                if (e2 < dx) {\n                    err += dx;\n                    y0 += sy;\n                }\n            }\n            return cells;\n        }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 710,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 71,
+      "x": 1790.333145,
+      "y": 619.2406009999997,
+      "title": "getCurveCells",
+      "content": "function getCurveCells(x0, y0, cx, cy, x1, y1) {\n    const cells = new Set();\n    const steps = 100; // Number of points to approximate the curve\n    \n    for (let t = 0; t <= 1; t += 1 / steps) {\n        // Quadratic Bézier curve formula: B(t) = (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2\n        const u = 1 - t;\n        const uu = u * u;\n        const tt = t * t;\n        const ut2 = 2 * u * t;\n        \n        const x = uu * x0 + ut2 * cx + tt * x1;\n        const y = uu * y0 + ut2 * cy + tt * y1;\n        \n        const gridX = Math.floor(x);\n        const gridY = Math.floor(y);\n        \n        if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize) {\n            cells.add(`${gridX},${gridY}`);\n        }\n    }\n    \n    return Array.from(cells).map(coord => {\n        const [x, y] = coord.split(',').map(Number);\n        return { x, y };\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "B"
+      ],
+      "metadata": {
+        "contentLength": 863,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 72,
+      "x": 1463.9022618181816,
+      "y": 1036.2868245454558,
+      "title": "drawAmmoDepot",
+      "content": "function drawAmmoDepot(depot) {\n    if (depot.collected) return;\n    \n    let screenX, screenY;\n    \n    if (isEditMode) {\n        screenX = depot.x * cellSize;\n        screenY = depot.y * cellSize;\n    } else {\n        screenX = (depot.x - cameraOffset.x) * cellSize;\n        screenY = (depot.y - cameraOffset.y) * cellSize;\n    }\n    \n    // 繪製彈藥箱陰影\n    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';\n    ctx.fillRect(screenX + cellSize*0.25, screenY + cellSize*0.2, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱主體\n    ctx.fillStyle = 'rgba(200, 160, 60, 0.9)';\n    ctx.fillRect(screenX + cellSize*0.2, screenY + cellSize*0.1, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱邊框\n    ctx.strokeStyle = 'rgba(100, 80, 30, 0.9)';\n    ctx.lineWidth = 2;\n    ctx.strokeRect(screenX + cellSize*0.2, screenY + cellSize*0.1, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱細節\n    ctx.fillStyle = 'rgba(150, 120, 40, 0.9)';\n    ctx.fillRect(screenX + cellSize*0.25, screenY + cellSize*0.15, cellSize*0.5, cellSize*0.1);\n    \n    // 繪製彈藥標誌\n    ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';\n    ctx.beginPath();\n    ctx.arc(screenX + cellSize*0.5, screenY + cellSize*0.5, cellSize*0.2, 0, Math.PI * 2);\n    ctx.fill();\n    \n    // 繪製數字\n    ctx.fillStyle = 'white';\n    ctx.font = `bold ${cellSize*0.3}px Arial`;\n    ctx.textAlign = 'center';\n    ctx.textBaseline = 'middle';\n    ctx.fillText('100', screenX + cellSize*0.5, screenY + cellSize*0.5);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1421,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 73,
+      "x": 1065.9057200000002,
+      "y": 1269.7974900000008,
+      "title": "clearCanvas",
+      "content": "function clearCanvas() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 80,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 74,
+      "x": 1057.9057200000002,
+      "y": 1464.7974900000008,
+      "title": "drawVisibleArea",
+      "content": "function drawVisibleArea(minX, maxX, minY, maxY) {\n    // 如果有選定區域，調整繪製範圍\n    if (regionSelect.visible && regionSelect.bounds) {\n        const { x1, y1, x2, y2 } = regionSelect.bounds;\n        minX = Math.max(minX || 0, x1);\n        maxX = Math.min(maxX || gridSize, x2 + 1); // +1 確保包含邊界\n        minY = Math.max(minY || 0, y1);\n        maxY = Math.min(maxY || gridSize, y2 + 1);\n    }\n\n    // 清除畫布（使用裁切後的尺寸）\n    ctx.fillStyle = '#2a2a2a';\n    ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n    // 繪製網格和地形\n    drawGridAndTerrain(minX, maxX, minY, maxY);\n    \n    // 繪製玩家視覺範圍\n    if (gameState === 'playing' && players.length > 0 && players[currentPlayerIndex].alive) {\n        drawPlayerVision(players[currentPlayerIndex], minX, minY);\n    }\n\n    // 根據遊戲狀態選擇繪製方式\n    if (gameState === 'setup') {\n        drawGridAndTerrain(minX, maxX, minY, maxY);\n    } else {\n        drawTerrainOnly(minX, maxX, minY, maxY);\n    }\n\n    // 繪製傳送點\n    drawTeleportsInView(minX, maxX, minY, maxY);\n    \n    // 繪製窗戶（在遊戲模式和編輯模式都繪製）\n    drawWindowsInView(minX, maxX, minY, maxY);\n\n    // 繪製所有存活玩家（不僅是當前玩家）\n    drawPlayersInView(minX, maxX, minY, maxY);\n\n    // 繪製其他遊戲元素（防禦區域、敵人等）\n    drawDefenseAreasInView(minX, maxX, minY, maxY);\n    drawEnemiesInView(minX, maxX, minY, maxY);\n    drawBulletsInView(minX, maxX, minY, maxY);\n    drawEnemyBulletsInView(minX, maxX, minY, maxY);\n    \n    if (grenade) {\n        drawGrenadeInView(minX, maxX, minY, maxY);\n    }\n    \n    // 繪製紅外瞄準線（如果適用）\n    if (gameState === 'playing' && players.length > 0 && players[currentPlayerIndex].alive) {\n        drawLaserSightInView(players[currentPlayerIndex], minX, minY);\n    }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawGridAndTerrain",
+        "drawPlayerVision",
+        "drawTerrainOnly",
+        "drawTeleportsInView",
+        "drawWindowsInView",
+        "drawPlayersInView",
+        "drawDefenseAreasInView",
+        "drawEnemiesInView",
+        "drawBulletsInView",
+        "drawEnemyBulletsInView",
+        "drawGrenadeInView",
+        "drawLaserSightInView"
+      ],
+      "metadata": {
+        "contentLength": 1637,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 75,
+      "x": 1075.9057200000002,
+      "y": 2107.797490000001,
+      "title": "drawRegionBorder",
+      "content": "function drawRegionBorder() {\n    if (!regionSelect.bounds) return;\n    \n    const {x1, y1, x2, y2} = regionSelect.bounds;\n    ctx.strokeStyle = 'red';\n    ctx.lineWidth = 3;\n    ctx.setLineDash([5, 5]);\n    ctx.strokeRect(\n        0,\n        0,\n        (x2 - x1) * cellSize,\n        (y2 - y1) * cellSize\n    );\n    ctx.setLineDash([]);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 338,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 76,
+      "x": 1074.7857200000003,
+      "y": 2311.1574900000014,
+      "title": "drawSelectionPreview",
+      "content": "function drawSelectionPreview() {\n    if (!regionSelect.start || !regionSelect.end) return;\n    \n    const x1 = Math.min(regionSelect.start.x, regionSelect.end.x);\n    const y1 = Math.min(regionSelect.start.y, regionSelect.end.y);\n    const x2 = Math.max(regionSelect.start.x, regionSelect.end.x);\n    const y2 = Math.max(regionSelect.start.y, regionSelect.end.y);\n    \n    ctx.strokeStyle = 'red';\n    ctx.lineWidth = 2;\n    ctx.setLineDash([5, 5]);\n    ctx.strokeRect(\n        x1 * cellSize,\n        y1 * cellSize,\n        (x2 - x1) * cellSize,\n        (y2 - y1) * cellSize\n    );\n    ctx.setLineDash([]);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 609,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 77,
+      "x": 1074.7857200000003,
+      "y": 2505.1574900000014,
+      "title": "drawFullMap",
+      "content": "function drawFullMap() {\n    drawBackgroundImage();\n    drawGridLines();\n    drawGridItems();\n    drawAllWindows();\n    drawAmmoDepots();\n    drawAllTeleports();\n    drawDefenseAreas();\n    drawEnemyPaths();\n    drawPlayers();\n    drawEnemies();\n    drawBullets();\n    drawEnemyBullets();\n    drawGrenade();\n    drawRectWallPreview();\n    drawRemovePreview();\n    drawLineWallPreview();\n    drawCurveWallPreview();\n    drawRemoveEntityPreview();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawBackgroundImage",
+        "drawGridLines",
+        "drawGridItems",
+        "drawAllWindows",
+        "drawAmmoDepots",
+        "drawAllTeleports",
+        "drawDefenseAreas",
+        "drawEnemyPaths",
+        "drawPlayers",
+        "drawEnemies",
+        "drawBullets",
+        "drawEnemyBullets",
+        "drawGrenade",
+        "drawRectWallPreview",
+        "drawRemovePreview",
+        "drawLineWallPreview",
+        "drawCurveWallPreview",
+        "drawRemoveEntityPreview"
+      ],
+      "metadata": {
+        "contentLength": 447,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 78,
+      "x": 1076.7857200000003,
+      "y": 3405.1574900000014,
+      "title": "drawAmmoDepotsInView",
+      "content": "function drawAmmoDepotsInView(minX, maxX, minY, maxY) {\n    ammoDepots.forEach(depot => {\n        if (depot.collected) return;\n        \n        const depotX = Math.floor(depot.x);\n        const depotY = Math.floor(depot.y);\n        \n        if (depotX >= minX && depotX < maxX && depotY >= minY && depotY < maxY) {\n            drawAmmoDepot(depot);\n        }\n    });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawAmmoDepot"
+      ],
+      "metadata": {
+        "contentLength": 368,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    },
+    {
+      "id": 79,
+      "x": 1371.3311745454548,
+      "y": 3396.0665809090924,
+      "title": "drawAmmoDepot",
+      "content": "function drawAmmoDepot(depot) {\n    if (depot.collected) return;\n    \n    let screenX, screenY;\n    \n    if (isEditMode) {\n        screenX = depot.x * cellSize;\n        screenY = depot.y * cellSize;\n    } else {\n        screenX = (depot.x - cameraOffset.x) * cellSize;\n        screenY = (depot.y - cameraOffset.y) * cellSize;\n    }\n    \n    // 繪製彈藥箱陰影\n    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';\n    ctx.fillRect(screenX + cellSize*0.25, screenY + cellSize*0.2, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱主體\n    ctx.fillStyle = 'rgba(200, 160, 60, 0.9)';\n    ctx.fillRect(screenX + cellSize*0.2, screenY + cellSize*0.1, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱邊框\n    ctx.strokeStyle = 'rgba(100, 80, 30, 0.9)';\n    ctx.lineWidth = 2;\n    ctx.strokeRect(screenX + cellSize*0.2, screenY + cellSize*0.1, cellSize*0.6, cellSize*0.7);\n    \n    // 繪製彈藥箱細節\n    ctx.fillStyle = 'rgba(150, 120, 40, 0.9)';\n    ctx.fillRect(screenX + cellSize*0.25, screenY + cellSize*0.15, cellSize*0.5, cellSize*0.1);\n    \n    // 繪製彈藥標誌\n    ctx.fillStyle = 'rgba(255, 0, 0, 0.9)';\n    ctx.beginPath();\n    ctx.arc(screenX + cellSize*0.5, screenY + cellSize*0.5, cellSize*0.2, 0, Math.PI * 2);\n    ctx.fill();\n    \n    // 繪製數字\n    ctx.fillStyle = 'white';\n    ctx.font = `bold ${cellSize*0.3}px Arial`;\n    ctx.textAlign = 'center';\n    ctx.textBaseline = 'middle';\n    ctx.fillText('100', screenX + cellSize*0.5, screenY + cellSize*0.5);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1421,
+        "lastUpdated": "2025-06-22T10:58:00.113Z"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromNode": 0,
+      "fromOutput": 0,
+      "toNode": 1
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 1,
+      "toNode": 2
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 2,
+      "toNode": 3
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 3,
+      "toNode": 4
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 4,
+      "toNode": 5
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 0,
+      "toNode": 6
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 0,
+      "toNode": 7
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 1,
+      "toNode": 8
+    },
+    {
+      "fromNode": 4,
+      "fromOutput": 0,
+      "toNode": 9
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 0,
+      "toNode": 10
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 0,
+      "toNode": 11
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 1,
+      "toNode": 12
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 2,
+      "toNode": 13
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 3,
+      "toNode": 14
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 4,
+      "toNode": 15
+    },
+    {
+      "fromNode": 6,
+      "fromOutput": 5,
+      "toNode": 16
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 0,
+      "toNode": 17
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 1,
+      "toNode": 18
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 2,
+      "toNode": 19
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 3,
+      "toNode": 20
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 4,
+      "toNode": 21
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 5,
+      "toNode": 22
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 6,
+      "toNode": 23
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 7,
+      "toNode": 24
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 8,
+      "toNode": 25
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 9,
+      "toNode": 26
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 10,
+      "toNode": 27
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 11,
+      "toNode": 28
+    },
+    {
+      "fromNode": 18,
+      "fromOutput": 0,
+      "toNode": 29
+    },
+    {
+      "fromNode": 18,
+      "fromOutput": 1,
+      "toNode": 30
+    },
+    {
+      "fromNode": 18,
+      "fromOutput": 2,
+      "toNode": 31
+    },
+    {
+      "fromNode": 22,
+      "fromOutput": 0,
+      "toNode": 32
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 0,
+      "toNode": 33
+    },
+    {
+      "fromNode": 24,
+      "fromOutput": 0,
+      "toNode": 34
+    },
+    {
+      "fromNode": 34,
+      "fromOutput": 0,
+      "toNode": 35
+    },
+    {
+      "fromNode": 34,
+      "fromOutput": 1,
+      "toNode": 36
+    },
+    {
+      "fromNode": 35,
+      "fromOutput": 0,
+      "toNode": 37
+    },
+    {
+      "fromNode": 37,
+      "fromOutput": 0,
+      "toNode": 38
+    },
+    {
+      "fromNode": 36,
+      "fromOutput": 0,
+      "toNode": 39
+    },
+    {
+      "fromNode": 36,
+      "fromOutput": 1,
+      "toNode": 40
+    },
+    {
+      "fromNode": 36,
+      "fromOutput": 2,
+      "toNode": 41
+    },
+    {
+      "fromNode": 39,
+      "fromOutput": 0,
+      "toNode": 42
+    },
+    {
+      "fromNode": 39,
+      "fromOutput": 1,
+      "toNode": 43
+    },
+    {
+      "fromNode": 42,
+      "fromOutput": 0,
+      "toNode": 44
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 0,
+      "toNode": 45
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 1,
+      "toNode": 46
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 2,
+      "toNode": 47
+    },
+    {
+      "fromNode": 47,
+      "fromOutput": 0,
+      "toNode": 48
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 3,
+      "toNode": 49
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 4,
+      "toNode": 50
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 5,
+      "toNode": 51
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 6,
+      "toNode": 52
+    },
+    {
+      "fromNode": 52,
+      "fromOutput": 0,
+      "toNode": 53
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 7,
+      "toNode": 54
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 8,
+      "toNode": 55
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 9,
+      "toNode": 56
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 10,
+      "toNode": 57
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 11,
+      "toNode": 58
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 12,
+      "toNode": 59
+    },
+    {
+      "fromNode": 55,
+      "fromOutput": 0,
+      "toNode": 60
+    },
+    {
+      "fromNode": 56,
+      "fromOutput": 0,
+      "toNode": 61
+    },
+    {
+      "fromNode": 61,
+      "fromOutput": 0,
+      "toNode": 62
+    },
+    {
+      "fromNode": 62,
+      "fromOutput": 0,
+      "toNode": 63
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 13,
+      "toNode": 64
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 14,
+      "toNode": 65
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 15,
+      "toNode": 66
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 16,
+      "toNode": 67
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 17,
+      "toNode": 68
+    },
+    {
+      "fromNode": 64,
+      "fromOutput": 0,
+      "toNode": 69
+    },
+    {
+      "fromNode": 66,
+      "fromOutput": 0,
+      "toNode": 70
+    },
+    {
+      "fromNode": 67,
+      "fromOutput": 0,
+      "toNode": 71
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 0,
+      "toNode": 72
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 0,
+      "toNode": 73
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 1,
+      "toNode": 74
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 2,
+      "toNode": 75
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 3,
+      "toNode": 76
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 4,
+      "toNode": 77
+    },
+    {
+      "fromNode": 8,
+      "fromOutput": 5,
+      "toNode": 78
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 0,
+      "toNode": 79
+    }
+  ],
+  "viewState": {
+    "scale": 0.9999999999999998,
+    "translateX": -853.125210263091,
+    "translateY": 1899.2943376795993
+  },
+  "savedAt": "2025-06-22T10:58:00.113Z"
+}
