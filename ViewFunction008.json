@@ -1,0 +1,1201 @@
+{
+  "version": "2.0",
+  "nodes": [
+    {
+      "id": 0,
+      "x": -95,
+      "y": -57,
+      "title": "ViewFunctionInterfaceV147-s",
+      "content": "",
+      "isConvertedToButton": false,
+      "items": [
+        "saveProject",
+        "loadProject"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 1,
+      "x": 286,
+      "y": 16,
+      "title": "loadProject",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "applyTransform",
+        "setupParagraphButtonEvents",
+        "escapeHtml",
+        "setupAddNodeButton",
+        "setupOutputPort",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 2,
+      "x": 680.571,
+      "y": -1805.1296999999995,
+      "title": "applyTransform",
+      "content": "function applyTransform() {\n  // 同時更新 transformContainer 和 nodesContainer 的變換\n  transformContainer.style.transform = `\n    translate(${translateX}px, ${translateY}px)\n    scale(${scale})\n  `;\n  nodesContainer.style.transform = `\n    translate(${translateX}px, ${translateY}px)\n    scale(${scale})\n  `;\n  drawConnections();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 324,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 3,
+      "x": 663.171,
+      "y": -1113.1297,
+      "title": "escapeHtml",
+      "content": "// HTML转义辅助函数\nfunction escapeHtml(unsafe) {\n  return unsafe\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\")\n  .replace(/\"/g, \"&quot;\")\n  .replace(/'/g, \"&#039;\");\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 192,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 4,
+      "x": 610.3589999999999,
+      "y": -34.59400000000002,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 5,
+      "x": 586.2727272727275,
+      "y": 601.6363636363634,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 6,
+      "x": 586.2727272727275,
+      "y": 798.6363636363634,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 7,
+      "x": 907.324,
+      "y": -270.75699999999995,
+      "title": "createNode",
+      "content": "// 主函數\nfunction createNode(x, y, title = '節點') {\n  const node = createNodeElement(x, y, title);\n  const nodeData = initializeNodeData(node, x, y);\n  \n  setupNodeDrag(node, nodeData);\n  setupDeleteButton(node, nodeData);\n  setupTitleInput(node);\n  setupParagraphInput(node, nodeData);\n  setupInitialAddButton(node, nodeData);\n  setupAddItemButton(node, nodeData);\n  setupPortEvents(node, nodeData);\n  \n  updateNodePosition(nodeData);\n  return nodeData;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNodeElement",
+        "initializeNodeData",
+        "setupNodeDrag",
+        "setupDeleteButton",
+        "setupTitleInput",
+        "setupParagraphInput",
+        "setupInitialAddButton",
+        "setupAddItemButton",
+        "setupPortEvents",
+        "updateNodePosition"
+      ],
+      "metadata": {
+        "contentLength": 453,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 8,
+      "x": 902.1735537190082,
+      "y": 298.1735537190083,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 9,
+      "x": 1275.440636363639,
+      "y": -1190.9958818181822,
+      "title": "createNodeElement",
+      "content": "// 创建节点DOM元素\nfunction createNodeElement(x, y, title) {\n  const node = document.createElement('div');\n  node.className = 'node';\nnode.style.left = `${x}px`;\nnode.style.top = `${y}px`;\n  node.innerHTML = `\n\n  <div class=\"node-header\">\n  <button class=\"jump-to-btn hidden\" title=\"跳轉到同名節點\"></button>\n  <div class=\"input-port\" data-type=\"input\"></div>\n<input type=\"text\" class=\"node-title\" value=\"${title}\">\n  <button class=\"delete-node-btn\">×</button>\n  </div>\n  <textarea class=\"paragraph-input\" placeholder=\"貼上段落內容...\"></textarea>\n  <div class=\"items\">\n  <div class=\"item\">\n  <input type=\"text\" class=\"item-text\" value=\"\">\n  <button class=\"add-node-btn\">+</button>\n  <div class=\"output-port\" data-type=\"output\"></div>\n  </div>\n  </div>\n  <button class=\"add-item-btn\">新加項目</button>\n  `;\n  nodesContainer.appendChild(node);\n  return node;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 836,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 10,
+      "x": 1275.9956454545463,
+      "y": -945.6089636363639,
+      "title": "initializeNodeData",
+      "content": "// 初始化节点数据\nfunction initializeNodeData(node, x, y) {\n  const nodeData = { \n    element: node, \n    id: nodes.length, \n    outputs: [0], \n    x, \n    y,\n    jumpIndex: 0 // 新增跳轉索引\n  };\n  nodes.push(nodeData);\n  \n  // 設置跳轉按鈕事件\n  const jumpBtn = node.querySelector('.jump-to-btn');\n  jumpBtn.addEventListener('click', (e) => {\n    jumpToSameNameNode(nodeData);\n    e.stopPropagation();\n  });\n  \n  return nodeData;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "jumpToSameNameNode"
+      ],
+      "metadata": {
+        "contentLength": 412,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 11,
+      "x": 1237.5292818181815,
+      "y": -711.2116909090911,
+      "title": "setupNodeDrag",
+      "content": "// 设置节点拖拽\nfunction setupNodeDrag(node, nodeData) {\n  node.addEventListener('mousedown', (e) => {\n    if (e.target.className.includes('node') || e.target.className === 'node-title') {\n      if (spacePressed || e.button === 1) return;\n\n      draggingNode = nodeData;\n      dragStartWorldX = toWorldX(e.clientX);\n      dragStartWorldY = toWorldY(e.clientY);\n      dragOffsetX = dragStartWorldX - nodeData.x;\n      dragOffsetY = dragStartWorldY - nodeData.y;\n\n      e.stopPropagation();\n    }\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "toWorldX",
+        "toWorldY"
+      ],
+      "metadata": {
+        "contentLength": 496,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 12,
+      "x": 1258.8838272727262,
+      "y": -338.8207818181819,
+      "title": "setupDeleteButton",
+      "content": "// 修改刪除節點函數\nfunction setupDeleteButton(node, nodeData) {\n  node.querySelector('.delete-node-btn').addEventListener('click', (e) => {\n    // 移除所有與該節點相關的連接\n    connections = connections.filter(conn =>\n      conn.fromNode !== nodeData.id && conn.toNode !== nodeData.id\n    );\n    \n    // 重新索引節點ID\n    nodes = nodes.filter(n => n.id !== nodeData.id);\n    nodes.forEach((n, index) => {\n      n.id = index; // 重新分配連續的ID\n    });\n    \n    // 更新連接中的節點ID引用\n    connections.forEach(conn => {\n      if (conn.fromNode > nodeData.id) conn.fromNode--;\n      if (conn.toNode > nodeData.id) conn.toNode--;\n    });\n    \n    node.remove();\n    drawConnections();\n    updateSameNameHighlights(); // 刪除後更新高亮\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "updateSameNameHighlights"
+      ],
+      "metadata": {
+        "contentLength": 719,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 13,
+      "x": 1320.0945719008255,
+      "y": 268.3142363636365,
+      "title": "setupTitleInput",
+      "content": "// 设置标题输入\nfunction setupTitleInput(node) {\n  const titleInput = node.querySelector('.node-title');\n  titleInput.addEventListener('input', () => {\n    titleInput.value = titleInput.value.trim();\n    // 當標題改變時，更新所有同名節點的高亮狀態\n    updateSameNameHighlights();\n\n    // 重置跳轉索引\n    const nodeData = findNodeByElement(node);\n    if (nodeData) {\n      nodeData.jumpIndex = 0;\n      updateJumpButton(nodeData);\n    }\n    // 更新所有節點的跳轉按鈕狀態\n    nodes.forEach(n => updateJumpButton(n));\n  });\n  \n  // 初始化跳轉按鈕狀態\n  const nodeData = findNodeByElement(node);\n  if (nodeData) {\n    updateJumpButton(nodeData);\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "updateSameNameHighlights",
+        "findNodeByElement",
+        "updateJumpButton"
+      ],
+      "metadata": {
+        "contentLength": 594,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 14,
+      "x": 1316.882799999999,
+      "y": 546.0267545454551,
+      "title": "setupParagraphInput",
+      "content": "// 设置段落输入\nfunction setupParagraphInput(node, nodeData) {\n  const paragraphInput = node.querySelector('.paragraph-input');\n  paragraphInput.addEventListener('input', function() {\n    handleParagraphInput(this, node, nodeData);\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "handleParagraphInput"
+      ],
+      "metadata": {
+        "contentLength": 233,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 15,
+      "x": 1384.0926999999986,
+      "y": 1282.9599000000003,
+      "title": "setupInitialAddButton",
+      "content": "// 设置初始添加按钮\nfunction setupInitialAddButton(node, nodeData) {\n  node.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    handleAddNodeClick(nodeData, 0, e);\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "handleAddNodeClick"
+      ],
+      "metadata": {
+        "contentLength": 181,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 16,
+      "x": 1276.8321672727238,
+      "y": 2023.0744063636362,
+      "title": "setupAddItemButton",
+      "content": "// 设置添加项目按钮\nfunction setupAddItemButton(node, nodeData) {\n  node.querySelector('.add-item-btn').addEventListener('click', () => {\n    addNewItem(node, nodeData);\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "addNewItem"
+      ],
+      "metadata": {
+        "contentLength": 169,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 17,
+      "x": 1259.7594399999966,
+      "y": 2374.310769999997,
+      "title": "setupPortEvents",
+      "content": "// 设置端口事件\nfunction setupPortEvents(node, nodeData) {\n  // 输入端口\n  node.querySelector('.input-port').addEventListener('mouseup', (e) => {\n    if (connecting) {\n      connections.push({\n        fromNode: connecting.fromNode,\n        fromOutput: connecting.fromOutput,\n        toNode: nodeData.id\n      });\n      connecting = null;\n      container.classList.remove('connecting');\n      drawConnections();\n    }\n  });\n\n  // 初始输出端口\n  setupOutputPort(node.querySelector('.output-port'), nodeData, 0);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 495,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 18,
+      "x": 1259.3958036363601,
+      "y": 2667.947133636358,
+      "title": "updateNodePosition",
+      "content": "// 修改節點位置更新函數\nfunction updateNodePosition(node) {\n  node.element.style.left = `${node.x}px`;\n  node.element.style.top = `${node.y}px`;\n  node.element.style.transform = 'none'; // 確保節點不受容器縮放影響\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 193,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 19,
+      "x": 1555.5865545454553,
+      "y": -948.9089636363638,
+      "title": "jumpToSameNameNode",
+      "content": "// 修改 jumpToSameNameNode 函數\nfunction jumpToSameNameNode(node) {\n  const title = node.element.querySelector('.node-title').value;\n  const sameNameNodes = nodes.filter(n =>\n  n.id !== node.id &&\n  n.element.querySelector('.node-title').value === title\n  );\n\n  if (sameNameNodes.length > 0) {\n    // 移除所有現有的高亮\n    document.querySelectorAll('.node').forEach(n => {\n      n.classList.remove('highlight');\n    });\n\n    // 高亮所有同名節點\n    sameNameNodes.forEach(targetNode => {\n      targetNode.element.classList.add('highlight');\n    });\n\n    // 顯示提示信息\n    showJumpHint(node, node.jumpIndex + 1, sameNameNodes.length);\n\n    // 更新跳轉索引\n    node.jumpIndex = (node.jumpIndex + 1) % sameNameNodes.length;\n\n    // 設置定時器移除高亮\n    setTimeout(() => {\n      sameNameNodes.forEach(targetNode => {\n        targetNode.element.classList.remove('highlight');\n      });\n    }, 10000);\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "showJumpHint"
+      ],
+      "metadata": {
+        "contentLength": 863,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 20,
+      "x": 1846.025397520662,
+      "y": -961.30565785124,
+      "title": "showJumpHint",
+      "content": "// 顯示跳轉順序提示\nfunction showJumpHint(node, current, total) {\n  const hint = document.createElement('div');\n  hint.className = 'jump-hint';\nhint.textContent = `${current}/${total}`;\n  hint.style.position = 'absolute';\n  hint.style.left = '20px';\n  hint.style.top = '20px';\n  hint.style.background = 'rgba(255, 204, 0, 0.8)';\n  hint.style.color = 'black';\n  hint.style.padding = '5px 10px';\n  hint.style.borderRadius = '10px';\n  hint.style.zIndex = '10000';\n\n  document.body.appendChild(hint);\n\n  setTimeout(() => {\n    hint.style.opacity = '0';\n    hint.style.transition = 'opacity 0.5s';\n    setTimeout(() => hint.remove(), 500);\n  }, 1000);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 640,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 21,
+      "x": 1567.4874636363636,
+      "y": -758.4235090909101,
+      "title": "toWorldX",
+      "content": "// 視圖轉換函數\nfunction toWorldX(x) {\n  return (x - translateX) / scale;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 69,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 22,
+      "x": 1577.069281818182,
+      "y": -570.4416909090913,
+      "title": "toWorldY",
+      "content": "function toWorldY(y) {\n  return (y - translateY) / scale;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 59,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 23,
+      "x": 1586.3474636363621,
+      "y": -384.27532727272734,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 24,
+      "x": 1584.5292818181808,
+      "y": -192.45714545454558,
+      "title": "updateSameNameHighlights",
+      "content": "// 新增函數：更新所有同名節點的高亮狀態\nfunction updateSameNameHighlights() {\n  // 先移除所有高亮\n  document.querySelectorAll('.node').forEach(node => {\n    node.classList.remove('highlight-same-name');\n  });\n\n  // 建立節點名稱映射\n  const nameMap = {};\n  nodes.forEach(node => {\n    const title = node.element.querySelector('.node-title').value;\n    if (!nameMap[title]) {\n      nameMap[title] = [];\n    }\n    nameMap[title].push(node);\n  });\n\n  // 為有相同名稱的節點添加高亮\n  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {\n    if (sameNameNodes.length > 1) {\n      sameNameNodes.forEach(node => {\n        node.element.classList.add('highlight-same-name');\n      });\n    }\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 651,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 25,
+      "x": 1594.0945719008255,
+      "y": 4.314236363636439,
+      "title": "updateSameNameHighlights",
+      "content": "// 新增函數：更新所有同名節點的高亮狀態\nfunction updateSameNameHighlights() {\n  // 先移除所有高亮\n  document.querySelectorAll('.node').forEach(node => {\n    node.classList.remove('highlight-same-name');\n  });\n\n  // 建立節點名稱映射\n  const nameMap = {};\n  nodes.forEach(node => {\n    const title = node.element.querySelector('.node-title').value;\n    if (!nameMap[title]) {\n      nameMap[title] = [];\n    }\n    nameMap[title].push(node);\n  });\n\n  // 為有相同名稱的節點添加高亮\n  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {\n    if (sameNameNodes.length > 1) {\n      sameNameNodes.forEach(node => {\n        node.element.classList.add('highlight-same-name');\n      });\n    }\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 651,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 26,
+      "x": 1592.0945719008255,
+      "y": 201.3142363636365,
+      "title": "findNodeByElement",
+      "content": "// 辅助函数：通过元素查找节点\n  function findNodeByElement(element) {\n    return nodes.find(node => node.element === element);\n  }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 117,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 27,
+      "x": 1599.0945719008255,
+      "y": 389.31423636363655,
+      "title": "updateJumpButton",
+      "content": "// 修改 updateJumpButton 函數\nfunction updateJumpButton(node) {\n  const title = node.element.querySelector('.node-title').value;\n  const jumpBtn = node.element.querySelector('.jump-to-btn');\n  \n  // 查找所有同名節點\n  const sameNameNodes = nodes.filter(n => \n    n.id !== node.id && \n    n.element.querySelector('.node-title').value === title\n  );\n  \n  if (sameNameNodes.length > 0) {\n    jumpBtn.classList.remove('hidden');\n    jumpBtn.setAttribute('data-count', sameNameNodes.length);\n    jumpBtn.title = `顯示同名節點 (共 ${sameNameNodes.length} 個)`;\n  } else {\n    jumpBtn.classList.add('hidden');\n    jumpBtn.removeAttribute('data-count');\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 631,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 28,
+      "x": 1600.882799999999,
+      "y": 586.0267545454551,
+      "title": "handleParagraphInput",
+      "content": "// 处理段落输入\nfunction handleParagraphInput(inputElement, node, nodeData) {\n  const content = inputElement.value.trim();\n  if (content === '') return;\n\n  const functionName = extractFunctionName(content);\n  if (functionName) {\n    node.querySelector('.node-title').value = functionName;\n  }\n\n  const calledFunctions = extractCalledFunctions(content, functionName);\n  if (calledFunctions.length > 0) {\n    createFunctionItems(nodeData, calledFunctions, container);\n  }\n\n  setupParagraphPopup(inputElement, content, nodeData);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "extractFunctionName",
+        "extractCalledFunctions",
+        "createFunctionItems",
+        "setupParagraphPopup"
+      ],
+      "metadata": {
+        "contentLength": 522,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 29,
+      "x": 1933.971436363635,
+      "y": 15.666300000000092,
+      "title": "extractFunctionName",
+      "content": "// 提取到外部的工具函數\nfunction extractFunctionName(content) {\n  const functionNameMatch = content.match(/function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/);\n  return functionNameMatch ? functionNameMatch[1] : null;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 197,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 30,
+      "x": 1930.3350727272714,
+      "y": 214.75720909090933,
+      "title": "extractCalledFunctions",
+      "content": "function extractCalledFunctions(content, functionNameToExclude) {\n  const functionCallRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g;\n  const functionNames = new Set();\n  let match;\n\n  while ((match = functionCallRegex.exec(content)) !== null) {\n    const calledFunctionName = match[1];\n    // 檢查是否在黑名單中或是要排除的函數名\n    if (!FUNCTION_BLACKLIST.includes(calledFunctionName) && \n        calledFunctionName !== functionNameToExclude) {\n      functionNames.add(calledFunctionName);\n    }\n  }\n\n  return Array.from(functionNames);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 526,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 31,
+      "x": 1935.2068909090892,
+      "y": 402.68266363636394,
+      "title": "createFunctionItems",
+      "content": "function createFunctionItems(nodeData, functionNames, container) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = '';\n\n  functionNames.forEach((name, index) => {\n    const newItem = document.createElement('div');\n    newItem.className = 'item';\n    newItem.innerHTML = `\n      <input type=\"text\" class=\"item-text\" value=\"${name}\">\n      <button class=\"add-node-btn\">+</button>\n      <div class=\"output-port\" data-type=\"output\"></div>\n    `;\n    itemsContainer.appendChild(newItem);\n\n    nodeData.outputs = functionNames.map((_, i) => i);\n    setupAddNodeButton(newItem, nodeData, index, container);\n    setupOutputPort(newItem, nodeData, index, container);\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 713,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 32,
+      "x": 1937.7432545454528,
+      "y": 807.9008454545456,
+      "title": "setupParagraphPopup",
+      "content": "function setupParagraphPopup(paragraphInput, content, nodeData) {\n  const btn = document.createElement('button');\n  btn.className = 'paragraph-btn';\n  btn.textContent = content.length > 50 ? content.substring(0, 47) + '...' : content;\n\n  const popup = document.createElement('div');\n  popup.className = 'paragraph-popup';\n  popup.textContent = content;\n\n  const container = document.createElement('div');\n  container.style.position = 'relative';\n  container.style.display = 'inline-block';\n  container.style.width = '100%';\n\n  container.appendChild(btn);\n  container.appendChild(popup);\n\n paragraphInput.replaceWith(container);\n  // 新增：用於存儲彈出框容器引用\n  let popupContainer = null;\n\n  btn.addEventListener('click', (e) => {\n    if (popupContainer && document.body.contains(popupContainer)) {\n      popupContainer.remove();\n    }\n\n    const btnRect = btn.getBoundingClientRect();\n    const btnCenterX = btnRect.left + btnRect.width / 2;\n    const btnCenterY = btnRect.top + btnRect.height / 2;\n    \n    const worldX = (btnCenterX - translateX) / scale;\n    const worldY = (btnCenterY - translateY) / scale;\n    \n    const popupWidth = 600;\n    const popupHeight = 200;\n    \n    popupContainer = document.createElement('div');\n    popupContainer.style.position = 'fixed';\n    popupContainer.style.left = '0';\n    popupContainer.style.top = '0';\n    popupContainer.style.width = `${popupWidth}px`;\n    popupContainer.style.height = `${popupHeight}px`;\n    popupContainer.style.transform = `\n      translate(${worldX * scale + translateX - popupWidth/2}px, \n                ${worldY * scale + translateY - popupHeight/2}px)\n    `;\n    popupContainer.style.zIndex = '10000';\n    popup.style.zIndex = '10000';\n    \n    popup.style.display = 'block';\n    popup.style.position = 'absolute';\n    popup.style.width = '100%';\n    popup.style.height = '100%';\n    popup.style.overflow = 'auto';\n    popupContainer.appendChild(popup);\n    \n    document.body.appendChild(popupContainer);\n\n    // 設置為當前活動彈出框\n    activePopup = popup;\n    popupScrollPosition = 0;\n    updatePopupScroll();\n    \n    e.stopPropagation();\n  });\n\n  // 保留原有的鍵盤事件監聽\n  const clearContentHandler = function(e) {\n    if (e.key.toLowerCase() === 'x' && activePopup === popup) {\n      paragraphInput.value = '';\n      resetItemsList(nodeData);\n      container.replaceWith(paragraphInput);\n      document.removeEventListener('keydown', clearContentHandler);\n      if (popupContainer) {\n        popupContainer.remove();\n        popupContainer = null;\n      }\n      activePopup = null;\n      e.preventDefault();\n    }\n  };\n  document.addEventListener('keydown', clearContentHandler);\n\n  // 點擊外部關閉\ndocument.addEventListener('click', (e) => {\n  if (popupContainer && !popupContainer.contains(e.target)) {  // 這裡缺少右括號\n    popupContainer.remove();\n    popupContainer = null;\n    activePopup = null;\n  }\n});\n\n \n}",
+      "isConvertedToButton": true,
+      "items": [
+        "updatePopupScroll",
+        "resetItemsList"
+      ],
+      "metadata": {
+        "contentLength": 2854,
+        "lastUpdated": "2025-06-23T17:23:40.848Z"
+      }
+    },
+    {
+      "id": 33,
+      "x": 2241.5705272727255,
+      "y": 243.59175454545485,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n      conn.fromNode === nodeData.id &&\n      conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n      baseX,\n      baseY,\n      name + ' 節點'\n    );\n\n    connections.push({\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 724,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 34,
+      "x": 2237.934163636362,
+      "y": 481.77357272727306,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 35,
+      "x": 2542.9159818181806,
+      "y": -213.9446090909088,
+      "title": "createNode",
+      "content": "function createNode(x, y, title = '節點') {\n  const node = createNodeElement(x, y, title);\n  const nodeData = initializeNodeData(node, x, y);\n  \n  setupNodeDrag(node, nodeData);\n  setupDeleteButton(node, nodeData);\n  setupTitleInput(node);\n  setupParagraphInput(node, nodeData);\n  setupInitialAddButton(node, nodeData);\n  setupAddItemButton(node, nodeData);\n  setupPortEvents(node, nodeData);\n  \n  updateNodePosition(nodeData);\n  return nodeData;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNodeElement",
+        "initializeNodeData",
+        "setupNodeDrag",
+        "setupDeleteButton",
+        "setupTitleInput",
+        "setupParagraphInput",
+        "setupInitialAddButton",
+        "setupAddItemButton",
+        "setupPortEvents",
+        "updateNodePosition"
+      ],
+      "metadata": {
+        "contentLength": 446,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 36,
+      "x": 2534.2977999999985,
+      "y": 350.86448181818207,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 37,
+      "x": 1646.729063636362,
+      "y": 1300.2326272727273,
+      "title": "handleAddNodeClick",
+      "content": "// 处理添加节点点击\nfunction handleAddNodeClick(nodeData, outputIndex, e) {\n  const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n  ).length;\n\n  const newNodeX = nodeData.x + 200 / scale;\n  const newNodeY = nodeData.y + (childNodes * 120 / scale);\n\n  const newNode = createNode(newNodeX, newNodeY);\n\n  connections.push({\n    fromNode: nodeData.id,\n    fromOutput: outputIndex,\n    toNode: newNode.id\n  });\n  drawConnections();\n  e.stopPropagation();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 510,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 38,
+      "x": 1528.6503490909054,
+      "y": 2042.1653154545452,
+      "title": "addNewItem",
+      "content": "// 添加新项目\nfunction addNewItem(node, nodeData) {\n  const items = node.querySelector('.items');\n  const itemCount = items.children.length;\n  const newItem = document.createElement('div');\n  newItem.className = 'item';\n  newItem.innerHTML = `\n    <input type=\"text\" class=\"item-text\" value=\"項目 ${itemCount + 1}\">\n    <button class=\"add-node-btn\">+</button>\n    <div class=\"output-port\" data-type=\"output\"></div>\n  `;\n  items.appendChild(newItem);\n  \n  // 使用當前長度作為新的輸出索引\n  const outputIndex = nodeData.outputs.length;\n  nodeData.outputs.push(outputIndex);\n\n  setupItemEvents(newItem, nodeData, outputIndex);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "setupItemEvents"
+      ],
+      "metadata": {
+        "contentLength": 604,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 39,
+      "x": 1797.7412581818144,
+      "y": 2046.7107699999997,
+      "title": "setupItemEvents",
+      "content": "// 设置项目事件\nfunction setupItemEvents(item, nodeData, outputIndex) {\n  item.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    handleAddNodeClick(nodeData, outputIndex, e);\n  });\n\n  setupOutputPort(item.querySelector('.output-port'), nodeData, outputIndex);\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "handleAddNodeClick",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 275,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 40,
+      "x": 2176.2600636363622,
+      "y": 1166.4786272727265,
+      "title": "createNode",
+      "content": "function createNode(x, y, title = '節點') {\n  const node = createNodeElement(x, y, title);\n  const nodeData = initializeNodeData(node, x, y);\n  \n  setupNodeDrag(node, nodeData);\n  setupDeleteButton(node, nodeData);\n  setupTitleInput(node);\n  setupParagraphInput(node, nodeData);\n  setupInitialAddButton(node, nodeData);\n  setupAddItemButton(node, nodeData);\n  setupPortEvents(node, nodeData);\n  \n  updateNodePosition(nodeData);\n  return nodeData;\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNodeElement",
+        "initializeNodeData",
+        "setupNodeDrag",
+        "setupDeleteButton",
+        "setupTitleInput",
+        "setupParagraphInput",
+        "setupInitialAddButton",
+        "setupAddItemButton",
+        "setupPortEvents",
+        "updateNodePosition"
+      ],
+      "metadata": {
+        "contentLength": 446,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 41,
+      "x": 2179.2600636363622,
+      "y": 1722.4786272727256,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 42,
+      "x": 2083.1958036363594,
+      "y": 1952.1653154545452,
+      "title": "handleAddNodeClick",
+      "content": "function handleAddNodeClick(nodeData, outputIndex, e) {\n  const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n  ).length;\n\n  const newNodeX = nodeData.x + 200 / scale;\n  const newNodeY = nodeData.y + (childNodes * 120 / scale);\n\n  const newNode = createNode(newNodeX, newNodeY);\n\n  connections.push({\n    fromNode: nodeData.id,\n    fromOutput: outputIndex,\n    toNode: newNode.id\n  });\n  drawConnections();\n  e.stopPropagation();\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 498,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 43,
+      "x": 2075.9230763636324,
+      "y": 2188.528951818181,
+      "title": "setupOutputPort",
+      "content": "// 设置输出端口\nfunction setupOutputPort(portElement, nodeData, outputIndex) {\n  portElement.addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex, // 確保使用正確的輸出索引\n      currentX: rect.left + rect.width / 2,\n      currentY: rect.top + rect.height / 2\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 573,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 44,
+      "x": 1538.8503490909056,
+      "y": 2265.2198609090897,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n  connections.forEach(conn => {\n    const fromNode = nodes[conn.fromNode];\n    const toNode = nodes[conn.toNode];\n\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n    const toPort = toNode.element.querySelector('.input-port');\n\n    const fromRect = fromPort.getBoundingClientRect();\n    const toRect = toPort.getBoundingClientRect();\n\n    const containerRect = container.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n    const endX = toRect.left + toRect.width / 2 - containerRect.left;\n    const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n    );\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n  });\n\n  // 處理連接中的線條\n  if (connecting) {\n    const fromNode = nodes[connecting.fromNode];\n    const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n    const fromRect = fromPort.getBoundingClientRect();\n\n    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n    const endX = connecting.currentX - container.getBoundingClientRect().left;\n    const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n    ctx.beginPath();\n    ctx.moveTo(startX, startY);\n    ctx.lineTo(endX, endY);\n    ctx.strokeStyle = '#888';\n    ctx.lineWidth = 2 * (1/scale);\n    ctx.stroke();\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1839,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 45,
+      "x": 1535.2139854545424,
+      "y": 2458.856224545449,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 46,
+      "x": 2230.470527272725,
+      "y": 669.7190272727274,
+      "title": "updatePopupScroll",
+      "content": "// 更新彈出框的滾動位置\nfunction updatePopupScroll() {\n  if (activePopup) {\n    activePopup.scrollTop = popupScrollPosition;\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 120,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 47,
+      "x": 2236.834163636362,
+      "y": 869.7190272727273,
+      "title": "resetItemsList",
+      "content": "function resetItemsList(nodeData) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = `\n    <div class=\"item\">\n      <input type=\"text\" class=\"item-text\" value=\"\">\n      <button class=\"add-node-btn\">+</button>\n      <div class=\"output-port\" data-type=\"output\"></div>\n    </div>\n  `;\n\n  nodeData.outputs = [0];\n  const newItem = itemsContainer.querySelector('.item');\n  setupAddNodeButton(newItem, nodeData, 0, container);\n  setupOutputPort(newItem, nodeData, 0, container);\n  \n  // 恢復輸入框（如果被替換）\n  const containerDiv = nodeData.element.querySelector('.paragraph-container');\n  if (containerDiv) {\n    const textarea = document.createElement('textarea');\n    textarea.className = 'paragraph-input';\n    textarea.placeholder = '貼上段落內容...';\n    containerDiv.replaceWith(textarea);\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 828,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 48,
+      "x": 2519.5614363636346,
+      "y": 701.5372090909091,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n      conn.fromNode === nodeData.id &&\n      conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n      baseX,\n      baseY,\n      name + ' 節點'\n    );\n\n    connections.push({\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 724,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 49,
+      "x": 2534.1068909090895,
+      "y": 961.5372090909091,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 50,
+      "x": 259.0000000000001,
+      "y": -244.00000000000006,
+      "title": "saveProject",
+      "content": "// 保存項目\nfunction saveProject() {\n  try {\n    const nodesData = nodes.map(node => {\n      const element = node.element;\n      \n      // 獲取段落內容（無論當前顯示的是輸入框還是按鈕）\n      let content = '';\n      const inputField = element.querySelector('.paragraph-input');\n      const contentBtn = element.querySelector('.paragraph-btn');\n      const popup = element.querySelector('.paragraph-popup');\n      \n      if (contentBtn && popup) {\n        // 如果已轉換為按鈕，從彈出框或按鈕的data屬性獲取原始內容\n        content = popup.textContent || contentBtn.dataset.originalContent || '';\n      } else if (inputField) {\n        // 如果還是輸入框狀態，直接獲取值\n        content = inputField.value;\n      }\n      \n      return {\n        id: node.id,\n        x: node.x,\n        y: node.y,\n        title: element.querySelector('.node-title').value || '未命名節點',\n        content: content,\n        isConvertedToButton: !!contentBtn, // 記錄是否已轉換\n        items: Array.from(element.querySelectorAll('.item-text')).map(item => item.value),\n        metadata: {\n          contentLength: content.length,\n          lastUpdated: new Date().toISOString()\n        }\n      };\n    });\n\n    // 准备连接数据\n    const connectionsData = connections.map(conn => ({\n      fromNode: conn.fromNode,\n      fromOutput: conn.fromOutput || 0,\n      toNode: conn.toNode\n    }));\n\n    // 创建完整项目数据\n    const projectData = {\n      version: '2.0', // 版本号\n      nodes: nodesData,\n      connections: connectionsData,\n      viewState: { \n        scale,\n        translateX,\n        translateY\n      },\n      savedAt: new Date().toISOString()\n    };\n\n    // 生成下载文件\n    const dataStr = JSON.stringify(projectData, null, 2);\n    const blob = new Blob([dataStr], { type: 'application/json' });\n    const url = URL.createObjectURL(blob);\n    \n    const filename = `node-project-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;\n    const link = document.createElement('a');\n    link.href = url;\n    link.download = filename;\n    link.style.display = 'none';\n    \n    document.body.appendChild(link);\n    link.click();\n    \n    // 清理\n    setTimeout(() => {\n      document.body.removeChild(link);\n      URL.revokeObjectURL(url);\n    }, 100);\n\n  } catch (error) {\n    console.error('保存失败:', error);\n    alert(`保存错误: ${error.message}`);\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2231,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 51,
+      "x": 691.94,
+      "y": -1587.8800000000006,
+      "title": "setupParagraphButtonEvents",
+      "content": "function setupParagraphButtonEvents(btn, popup, paragraphInput, nodeData) {\n\n\n   // 創建COPY按鈕\n  const copyBtn = document.createElement('button');\n  copyBtn.className = 'copy-btn';\n  copyBtn.textContent = '';\n  \n  // 添加點擊事件\n  copyBtn.addEventListener('click', (e) => {\n    e.stopPropagation();\n    try {\n      navigator.clipboard.writeText(popup.textContent)\n        .then(() => {\n          copyBtn.textContent = '已複製!';\n          setTimeout(() => {\n            copyBtn.textContent = '';\n          }, 2000);\n        })\n        .catch(err => {\n          console.error('複製失敗:', err);\n          copyBtn.textContent = '複製失敗';\n          setTimeout(() => {\n            copyBtn.textContent = '';\n          }, 2000);\n          \n        });\n    } catch (err) {\n      console.error('複製失敗:', err);\n      copyBtn.textContent = '複製失敗';\n      setTimeout(() => {\n        copyBtn.textContent = '';\n      }, 2000);\n    }\n  });\n\n  // 將COPY按鈕添加到彈出框\n  popup.appendChild(copyBtn);\n\n\n  // 保存原始DOM位置（用于完美还原）\n  const originalParent = popup.parentNode;\n  const originalNextSibling = popup.nextSibling;\n  const originalStyles = {\n    position: popup.style.position,\n    left: popup.style.left,\n    top: popup.style.top,\n    zIndex: popup.style.zIndex\n  };\n\n\n\n  // 点击按钮显示弹窗\n btn.addEventListener('click', (e) => {\n    document.body.appendChild(popup);\n    popup.style.position = 'fixed';\n    popup.style.zIndex = '2147483647';\n    popup.style.display = 'block';\n    ALL_ACTIVE_POPUPS.add(popup);\n    activePopup = popup;\n    arrangePopups();\n    e.stopPropagation();\n  });\n\n  // 点击外部关闭所有弹窗\n  const handleClickOutside = (e) => {\n    let isClickInsideAnyPopup = false;\n    \n    // 检查是否点击了任何弹窗或其关联按钮\n    ALL_ACTIVE_POPUPS.forEach(p => {\n      const relatedBtn = p.previousElementSibling?.classList?.contains('paragraph-btn') \n                       ? p.previousElementSibling \n                       : null;\n      \n      if (p.contains(e.target) || (relatedBtn && relatedBtn.contains(e.target))) {\n        isClickInsideAnyPopup = true;\n      }\n    });\n\n    // 如果点击在弹窗外部，关闭所有弹窗\n    if (!isClickInsideAnyPopup) {\n      ALL_ACTIVE_POPUPS.forEach(p => {\n        p.style.display = 'none';\n        // 还原原始DOM位置\n        if (originalParent && p.parentNode === document.body) {\n          originalParent.insertBefore(p, originalNextSibling);\n        }\n        // 还原原始样式\n        Object.entries(originalStyles).forEach(([prop, value]) => {\n          p.style[prop] = value;\n        });\n      });\n      ALL_ACTIVE_POPUPS.clear();\n      activePopup = null;\n    }\n  };\n\n  // X键清空功能（保持原有逻辑）\n  const clearHandler = (e) => {\n    if (e.key.toLowerCase() === 'x' && activePopup === popup) {\n      paragraphInput.value = '';\n      resetItemsList(nodeData);\n      btn.parentElement.replaceWith(paragraphInput);\n      popup.style.display = 'none';\n      ALL_ACTIVE_POPUPS.delete(popup);\n      activePopup = null;\n      e.preventDefault();\n    }\n  };\n\n  // 添加事件监听\n  document.addEventListener('click', handleClickOutside);\n  document.addEventListener('keydown', clearHandler);\n\n  // 自动清理（防止内存泄漏）\n  popup.addEventListener('DOMNodeRemoved', () => {\n    document.removeEventListener('click', handleClickOutside);\n    document.removeEventListener('keydown', clearHandler);\n    ALL_ACTIVE_POPUPS.delete(popup);\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "arrangePopups",
+        "resetItemsList"
+      ],
+      "metadata": {
+        "contentLength": 3255,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 52,
+      "x": 989.2127272727274,
+      "y": -1434.243636363637,
+      "title": "resetItemsList",
+      "content": "function resetItemsList(nodeData) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = `\n  <div class=\"item\">\n  <input type=\"text\" class=\"item-text\" value=\"\">\n  <button class=\"add-node-btn\">+</button>\n  <div class=\"output-port\" data-type=\"output\"></div>\n  </div>\n  `;\n\n  nodeData.outputs = [0];\n  const newItem = itemsContainer.querySelector('.item');\n  setupAddNodeButton(newItem, nodeData, 0, container);\n  setupOutputPort(newItem, nodeData, 0, container);\n\n  // 恢復輸入框（如果被替換）\n  const containerDiv = nodeData.element.querySelector('.paragraph-container');\n  if (containerDiv) {\n    const textarea = document.createElement('textarea');\n    textarea.className = 'paragraph-input';\n    textarea.placeholder = '貼上段落內容...';\n    containerDiv.replaceWith(textarea);\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 810,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 53,
+      "x": 977.3164545454546,
+      "y": -1973.3115181818175,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 54,
+      "x": 995.5400000000001,
+      "y": -1713.2800000000007,
+      "title": "arrangePopups",
+      "content": "function arrangePopups() {\n  const popups = Array.from(ALL_ACTIVE_POPUPS);\n  if (popups.length === 0) return;\n\n  const screenWidth = window.innerWidth;\n  const screenHeight = window.innerHeight;\n  const margin = 10;\n\n  // 统一尺寸配置\n  const uniformSize = {\n  small: { width: Math.min(350, screenWidth * 0.4), height: Math.min(250, screenHeight * 0.35) },\n  medium: { width: Math.min(400, screenWidth * 0.5), height: Math.min(300, screenHeight * 0.45) }\n  };\n\n  // 1. 设置弹窗尺寸\n  popups.forEach((popup, index) => {\n    if (index >= 5) { // 第6个开始\n    popup.style.width = `${uniformSize.small.width}px`;\n    popup.style.height = `${uniformSize.small.height}px`;\n    } else if (index >= 3) { // 第4-5个\n    popup.style.width = `${uniformSize.medium.width}px`;\n    popup.style.height = `${uniformSize.medium.height}px`;\n    } else { // 前3个\n    popup.style.maxWidth = `${screenWidth * 0.8}px`;\n    popup.style.maxHeight = `${screenHeight * 0.8}px`;\n      popup.style.width = '';\n      popup.style.height = '';\n    }\n    popup.style.display = 'block';\n  });\n\n  // 2. 处理1-3个弹窗（宽度自适应）\n  if (popups.length <= 3) {\n    const firstThree = popups.slice(0, 3);\n    adjustWidths(firstThree, margin, screenWidth);\n    arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n    return;\n  }\n\n  // 排列前3个（带宽度自适应）\n  const firstThree = popups.slice(0, 3);\n  adjustWidths(firstThree, margin, screenWidth);\n  arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n\n  // 3. 处理第4-5个弹窗（新增高度居中逻辑）\n  if (popups.length >= 4) {\n    // 计算各列高度\n    const colHeights = firstThree.map(popup =>\n    parseFloat(popup.style.top) + popup.getBoundingClientRect().height\n    );\n\n    // 找出最短和中间高度的列\n    const sortedIndices = [...colHeights]\n  .map((h, i) => ({h, i}))\n    .sort((a, b) => a.h - b.h)\n    .map(obj => obj.i);\n\n    const shortestCol = sortedIndices[0];\n    const middleCol = sortedIndices[1];\n\n    // 放置第4个在最短列下方\n    const fourthPopup = popups[3];\n    const fourthRect = fourthPopup.getBoundingClientRect();\n    let fourthY = colHeights[shortestCol] + margin;\n\n    // 放置第5个在中间高度列下方\n    const fifthPopup = popups.length >= 5 ? popups[4] : null;\n    const fifthRect = fifthPopup?.getBoundingClientRect();\n    let fifthY = colHeights[middleCol] + margin;\n\n    // 计算整体高度\n    const totalHeight = Math.max(\n    fourthY + fourthRect.height,\n    fifthY + (fifthRect?.height || 0)\n    );\n\n    // 尝试垂直居中\n    const centerOffset = Math.max(0, (screenHeight - totalHeight) / 2);\n\n    if (centerOffset > 0) {\n      // 有足够空间居中\n      firstThree.forEach(popup => {\n      popup.style.top = `${parseFloat(popup.style.top) + centerOffset}px`;\n      });\n\n    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;\n    fourthPopup.style.top = `${fourthY + centerOffset}px`;\n\n      if (fifthPopup) {\n      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;\n      fifthPopup.style.top = `${fifthY + centerOffset}px`;\n      }\n    } else {\n      // 需要缩放高度\n      const scaleFactor = screenHeight / totalHeight;\n\n      // 调整前3个高度\n      firstThree.forEach(popup => {\n        const rect = popup.getBoundingClientRect();\n      popup.style.height = `${rect.height * scaleFactor * 0.9}px`; // 保留10%边距\n      });\n\n      // 重新计算位置\n      arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n      const newColHeights = firstThree.map(popup =>\n      parseFloat(popup.style.top) + popup.getBoundingClientRect().height\n      );\n\n      // 重新放置第4-5个\n    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;\n    fourthPopup.style.top = `${newColHeights[shortestCol] + margin}px`;\n\n      if (fifthPopup) {\n      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;\n      fifthPopup.style.top = `${newColHeights[middleCol] + margin}px`;\n      }\n    }\n  }\n\n  // 4. 处理第6+个弹窗（左上角网格排列）\n  if (popups.length >= 6) {\n    let currentX = margin;\n    let currentY = margin;\n    let rowHeight = 0;\n\n    for (let i = 5; i < popups.length; i++) {\n      const popup = popups[i];\n      const rect = popup.getBoundingClientRect();\n\n      // 换行检查\n      if (currentX + rect.width > screenWidth) {\n        currentX = margin;\n        currentY += rowHeight + margin;\n        rowHeight = 0;\n      }\n\n      // 设置位置\n    popup.style.left = `${currentX}px`;\n    popup.style.top = `${currentY}px`;\n\n      // 更新参数\n      currentX += rect.width + margin;\n      rowHeight = Math.max(rowHeight, rect.height);\n\n      // 超出屏幕底部处理\n      if (currentY + rect.height > screenHeight) {\n        currentX = margin;\n        currentY = margin;\n      }\n    }\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "adjustWidths",
+        "arrangeGridLayout"
+      ],
+      "metadata": {
+        "contentLength": 4573,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 55,
+      "x": 1291.9036363636365,
+      "y": -1845.2890909090913,
+      "title": "adjustWidths",
+      "content": "// 宽度自适应辅助函数\nfunction adjustWidths(popups, margin, screenWidth) {\n  let totalWidth = 0;\n  const originalWidths = [];\n\n  popups.forEach(popup => {\n    popup.style.width = '';\n    const rect = popup.getBoundingClientRect();\n    originalWidths.push(rect.width);\n    totalWidth += rect.width;\n  });\n\n  totalWidth += margin * (popups.length - 1);\n\n  if (totalWidth > screenWidth) {\n    const scaleFactor = (screenWidth - margin * (popups.length - 1)) /\n    (totalWidth - margin * (popups.length - 1));\n\n    popups.forEach((popup, i) => {\n    popup.style.width = `${originalWidths[i] * scaleFactor}px`;\n    });\n  }\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 610,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    },
+    {
+      "id": 56,
+      "x": 1297.358181818182,
+      "y": -1644.1890909090916,
+      "title": "arrangeGridLayout",
+      "content": "// 原有的網格佈局函數\nfunction arrangeGridLayout(popups, margin, screenWidth, screenHeight) {\n  if (popups.length === 0) return;\n\n  // 計算所有彈出框的總面積和平均寬高\n  let totalWidth = 0;\n  let totalHeight = 0;\n  popups.forEach(popup => {\n    const rect = popup.getBoundingClientRect();\n    totalWidth += rect.width + margin;\n    totalHeight += rect.height + margin;\n  });\n\n  // 計算最接近正方形的行列分佈\n  const aspectRatio = screenWidth / screenHeight;\n  let cols = Math.ceil(Math.sqrt(popups.length * aspectRatio));\n  let rows = Math.ceil(popups.length / cols);\n\n  // 調整行列數以更貼近正方形\n  while (rows > cols && (rows - 1) * cols >= popups.length) {\n    rows--;\n    cols = Math.ceil(popups.length / rows);\n  }\n\n  // 計算每行列的最大寬高\n  const colWidths = new Array(cols).fill(0);\n  const rowHeights = new Array(rows).fill(0);\n  popups.forEach((popup, index) => {\n    const col = index % cols;\n    const row = Math.floor(index / cols);\n    const rect = popup.getBoundingClientRect();\n    colWidths[col] = Math.max(colWidths[col], rect.width);\n    rowHeights[row] = Math.max(rowHeights[row], rect.height);\n  });\n\n  // 計算總佈局寬高\n  const layoutWidth = colWidths.reduce((sum, width) => sum + width + margin, -margin);\n  const layoutHeight = rowHeights.reduce((sum, height) => sum + height + margin, -margin);\n\n  // 計算起始位置（居中）\n  const startX = (screenWidth - layoutWidth) / 2;\n  const startY = (screenHeight - layoutHeight) / 2;\n\n  // 設置每個彈出框的位置\n  const colPositions = [];\n  let currentX = startX;\n  for (let i = 0; i < cols; i++) {\n    colPositions.push(currentX);\n    currentX += colWidths[i] + margin;\n  }\n\n  const rowPositions = [];\n  let currentY = startY;\n  for (let i = 0; i < rows; i++) {\n    rowPositions.push(currentY);\n    currentY += rowHeights[i] + margin;\n  }\n\n  popups.forEach((popup, index) => {\n    const col = index % cols;\n    const row = Math.floor(index / cols);\n    const rect = popup.getBoundingClientRect();\n\n  popup.style.left = `${colPositions[col]}px`;\n  popup.style.top = `${rowPositions[row]}px`;\n  popup.style.width = `${rect.width}px`;\n  popup.style.height = `${rect.height}px`;\n  });\n}",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2062,
+        "lastUpdated": "2025-06-23T17:23:40.849Z"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromNode": 0,
+      "fromOutput": 1,
+      "toNode": 1
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 0,
+      "toNode": 2
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 2,
+      "toNode": 3
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 3,
+      "toNode": 4
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 4,
+      "toNode": 5
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 5,
+      "toNode": 6
+    },
+    {
+      "fromNode": 4,
+      "fromOutput": 0,
+      "toNode": 7
+    },
+    {
+      "fromNode": 4,
+      "fromOutput": 1,
+      "toNode": 8
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 0,
+      "toNode": 9
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 1,
+      "toNode": 10
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 2,
+      "toNode": 11
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 3,
+      "toNode": 12
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 4,
+      "toNode": 13
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 5,
+      "toNode": 14
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 6,
+      "toNode": 15
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 7,
+      "toNode": 16
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 8,
+      "toNode": 17
+    },
+    {
+      "fromNode": 7,
+      "fromOutput": 9,
+      "toNode": 18
+    },
+    {
+      "fromNode": 10,
+      "fromOutput": 0,
+      "toNode": 19
+    },
+    {
+      "fromNode": 19,
+      "fromOutput": 0,
+      "toNode": 20
+    },
+    {
+      "fromNode": 11,
+      "fromOutput": 0,
+      "toNode": 21
+    },
+    {
+      "fromNode": 11,
+      "fromOutput": 1,
+      "toNode": 22
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 0,
+      "toNode": 23
+    },
+    {
+      "fromNode": 12,
+      "fromOutput": 1,
+      "toNode": 24
+    },
+    {
+      "fromNode": 13,
+      "fromOutput": 0,
+      "toNode": 25
+    },
+    {
+      "fromNode": 13,
+      "fromOutput": 1,
+      "toNode": 26
+    },
+    {
+      "fromNode": 13,
+      "fromOutput": 2,
+      "toNode": 27
+    },
+    {
+      "fromNode": 14,
+      "fromOutput": 0,
+      "toNode": 28
+    },
+    {
+      "fromNode": 28,
+      "fromOutput": 0,
+      "toNode": 29
+    },
+    {
+      "fromNode": 28,
+      "fromOutput": 1,
+      "toNode": 30
+    },
+    {
+      "fromNode": 28,
+      "fromOutput": 2,
+      "toNode": 31
+    },
+    {
+      "fromNode": 28,
+      "fromOutput": 3,
+      "toNode": 32
+    },
+    {
+      "fromNode": 31,
+      "fromOutput": 0,
+      "toNode": 33
+    },
+    {
+      "fromNode": 31,
+      "fromOutput": 1,
+      "toNode": 34
+    },
+    {
+      "fromNode": 33,
+      "fromOutput": 0,
+      "toNode": 35
+    },
+    {
+      "fromNode": 33,
+      "fromOutput": 1,
+      "toNode": 36
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 0,
+      "toNode": 37
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 0,
+      "toNode": 38
+    },
+    {
+      "fromNode": 38,
+      "fromOutput": 0,
+      "toNode": 39
+    },
+    {
+      "fromNode": 37,
+      "fromOutput": 0,
+      "toNode": 40
+    },
+    {
+      "fromNode": 37,
+      "fromOutput": 1,
+      "toNode": 41
+    },
+    {
+      "fromNode": 39,
+      "fromOutput": 0,
+      "toNode": 42
+    },
+    {
+      "fromNode": 39,
+      "fromOutput": 1,
+      "toNode": 43
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 0,
+      "toNode": 44
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 1,
+      "toNode": 45
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 0,
+      "toNode": 46
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 1,
+      "toNode": 47
+    },
+    {
+      "fromNode": 47,
+      "fromOutput": 0,
+      "toNode": 48
+    },
+    {
+      "fromNode": 47,
+      "fromOutput": 1,
+      "toNode": 49
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 0,
+      "toNode": 50
+    },
+    {
+      "fromNode": 1,
+      "fromOutput": 1,
+      "toNode": 51
+    },
+    {
+      "fromNode": 51,
+      "fromOutput": 1,
+      "toNode": 52
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 0,
+      "toNode": 53
+    },
+    {
+      "fromNode": 51,
+      "fromOutput": 0,
+      "toNode": 54
+    },
+    {
+      "fromNode": 54,
+      "fromOutput": 0,
+      "toNode": 55
+    },
+    {
+      "fromNode": 54,
+      "fromOutput": 1,
+      "toNode": 56
+    }
+  ],
+  "viewState": {
+    "scale": 0.9999999999999998,
+    "translateX": 20.05199911339514,
+    "translateY": 1123.0084514467444
+  },
+  "savedAt": "2025-06-23T17:23:40.849Z"
+}
