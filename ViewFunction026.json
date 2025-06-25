@@ -1,0 +1,2218 @@
+{
+  "version": "2.0",
+  "nodes": [
+    {
+      "id": 0,
+      "x": -341,
+      "y": 56,
+      "title": "172-s",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "saveProject",
+        "loadProject",
+        "addEventListener",
+        "參數"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 1,
+      "x": 415.2903305785125,
+      "y": -1098.786694214876,
+      "title": "saveProject",
+      "content": "// 保存項目\nfunction saveProject() {\n  try {\n    const nodesData = nodes.map(node => {\n      const element = node.element;\n\n      // 獲取段落內容（無論當前顯示的是輸入框還是按鈕）\n      let content = '';\n      const inputField = element.querySelector('.paragraph-input');\n      const contentBtn = element.querySelector('.paragraph-btn');\n      const popup = element.querySelector('.paragraph-popup');\n\n      if (contentBtn && popup) {\n        // 如果已轉換為按鈕，從彈出框或按鈕的data屬性獲取原始內容\n        content = popup.textContent || contentBtn.dataset.originalContent || '';\n      } else if (inputField) {\n        // 如果還是輸入框狀態，直接獲取值\n        content = inputField.value;\n      }\n\n      return {\n        id: node.id,\n        x: node.x,\n        y: node.y,\n        title: element.querySelector('.node-title').value || '未命名節點',\n        content: content,\n        description: nodeDescriptions[node.id] || '',\n        isConvertedToButton: !!contentBtn, // 記錄是否已轉換\n        items: Array.from(element.querySelectorAll('.item-text')).map(item => item.value),\n        metadata: {\n          contentLength: content.length,\n          lastUpdated: new Date().toISOString()\n        }\n      };\n    });\n\n    // 准备连接数据\n    const connectionsData = connections.map(conn => ( {\n      fromNode: conn.fromNode,\n      fromOutput: conn.fromOutput || 0,\n      toNode: conn.toNode\n    }));\n\n    // 创建完整项目数据\n    const projectData = {\n      version: '2.0', // 版本号\n      nodes: nodesData,\n      connections: connectionsData,\n      viewState: {\n        scale,\n        translateX,\n        translateY\n      },\n      savedAt: new Date().toISOString()\n    };\n\n    // 生成下载文件\n    const dataStr = JSON.stringify(projectData, null, 2);\n  const blob = new Blob([dataStr], { type: 'application/json' });\n    const url = URL.createObjectURL(blob);\n\n  const filename = `node-project-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;\n    const link = document.createElement('a');\n    link.href = url;\n    link.download = filename;\n    link.style.display = 'none';\n\n    document.body.appendChild(link);\n    link.click();\n\n    // 清理\n    setTimeout(() => {\n      document.body.removeChild(link);\n      URL.revokeObjectURL(url);\n    }, 100);\n\n  } catch (error) {\n    console.error('保存失败:', error);\n  alert(`保存错误: ${error.message}`);\n  }\n}",
+      "description": "saveProject\n功能\n\n將當前項目數據（包括節點、連線和視圖狀態）序列化為 JSON 格式，生成可下載的文件，並處理可能的錯誤。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element, x, y 等）。\n    connections (Array)：全局連線數組，包含連線的起點節點、輸出端口和終點節點信息。\n    nodeDescriptions (Object)：全局對象，存儲節點的描述信息，以節點 ID 為鍵。\n    scale (Number)：畫布的當前縮放比例。\n    translateX, translateY (Number)：畫布的水平和垂直平移量。\n\n詳細說明\n\n    收集節點數據：\n        遍歷 nodes 數組，為每個節點生成數據對象，包含以下字段：\n            id：節點的唯一標識。\n            x, y：節點的坐標。\n            title：節點標題，從 .node-title 輸入框獲取，默認為“未命名節點”。\n            content：段落內容，根據當前狀態從以下來源獲取：\n                若存在按鈕（.paragraph-btn）和彈出框（.paragraph-popup），優先從 popup.textContent 或 contentBtn.dataset.originalContent 獲取內容。\n                若存在輸入框（.paragraph-input），直接從 inputField.value 獲取。\n                若無有效來源，設置為空字符串。\n            description：節點描述，從 nodeDescriptions[node.id] 獲取，默認為空字符串。\n            isConvertedToButton：布林值，表示是否已將輸入框轉換為按鈕（!!contentBtn）。\n            items：項目列表，從 .item-text 輸入框的 value 組成數組。\n            metadata：包含元數據：\n                contentLength：段落內容的字符長度。\n                lastUpdated：當前時間的 ISO 格式字符串（new Date().toISOString()）。\n    收集連線數據：\n        遍歷 connections 數組，為每條連線生成數據對象，包含：\n            fromNode：起始節點 ID。\n            fromOutput：輸出端口索引，默認為 0。\n            toNode：目標節點 ID。\n    構建項目數據：\n        創建 projectData 對象，包含：\n            version：項目數據版本，固定為“2.0”。\n            nodes：節點數據數組（nodesData）。\n            connections：連線數據數組（connectionsData）。\n            viewState：視圖狀態，包含 scale, translateX, translateY。\n            savedAt：保存時間，ISO 格式字符串。\n    生成下載文件：\n        使用 JSON.stringify(projectData, null, 2) 將項目數據序列化為格式化的 JSON 字符串（縮進 2 空格）。\n        創建 Blob 對象，類型為 application/json，包含 JSON 字符串。\n        使用 URL.createObjectURL 生成臨時 URL。\n        生成文件名，格式為 node-project-YYYY-MM-DDTHH-mm-ssZ.json（ISO 時間戳，替換冒號和點為破折號）。\n        創建隱藏的 <a> 元素，設置 href 為臨時 URL，download 屬性為文件名。\n        將 <a> 元素添加到文檔，觸發點擊以下載文件。\n    清理資源：\n        使用 setTimeout 延遲 100 毫秒，移除 <a> 元素並釋放臨時 URL（URL.revokeObjectURL）。\n    錯誤處理：\n        使用 try-catch 塊捕獲潛在錯誤（如 JSON 序列化失敗或 DOM 操作錯誤）。\n        若發生錯誤，記錄到控制台（console.error）並顯示警示框（alert），包含錯誤訊息。\n\n參數作用\n\n    無直接參數，函數通過全局變數訪問節點、連線和視圖狀態，確保能完整捕獲當前項目數據。\n\n依賴的外部變數/函數\n\n    nodes：提供節點數據，用於提取節點屬性和內容。\n    connections：提供連線數據，用於保存連線關係。\n    nodeDescriptions：提供節點描述，作為可選字段保存。\n    scale, translateX, translateY：提供視圖狀態，用於恢復畫布視圖。\n    escapeHtml（間接依賴）：用於項目列表（items）的文本轉義（在其他函數中調用，如 createNode 或 resetItemsList）。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2249,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 2,
+      "x": 400.53000000000003,
+      "y": -850.3900000000001,
+      "title": "loadProject",
+      "content": "// 載入項目\nfunction loadProject(event) {\n  const file = event.target.files[0];\n  if (!file) return;\n\n  const reader = new FileReader();\n  reader.onload = (e) => {\n    try {\n      const projectData = JSON.parse(e.target.result);\n\n      // 清除現有數據\n      nodesContainer.innerHTML = '';\n      nodes = [];\n      connections = [];\n\n      // 恢復視圖狀態\n      if (projectData.viewState) {\n        scale = projectData.viewState.scale || 1;\n        translateX = projectData.viewState.translateX || window.innerWidth / 2 - 100;\n        translateY = projectData.viewState.translateY || window.innerHeight / 2 - 50;\n        applyTransform();\n      }\n\n      // 恢復節點\n      const nodeMap = {};\n      projectData.nodes?.forEach(nodeData => {\n                        if (nodeData.description) {\n          nodeDescriptions[nodeData.id] = nodeData.description;\n        }\n        const newNode = createNode(nodeData.x, nodeData.y, nodeData.title || '節點');\n        nodeMap[nodeData.id] = newNode;\n\n        // 恢復段落內容\n        const paragraphInput = newNode.element.querySelector('.paragraph-input');\n\n\n        if (paragraphInput && nodeData.content !== undefined) {\n          paragraphInput.value = nodeData.content;\n\n          if (nodeData.isConvertedToButton && nodeData.content.trim()) {\n            // 創建按鈕容器\n            const btn = document.createElement('button');\n            btn.className = 'paragraph-btn';\n            btn.textContent = nodeData.content.length > 50\n              ? nodeData.content.substring(0, 47) + '...'\n              : nodeData.content;\n            btn.dataset.originalContent = nodeData.content;\n\n            // 創建彈出框\n            const popup = document.createElement('div');\n            popup.className = 'paragraph-popup';\n            popup.textContent = nodeData.content;\n\n            // 創建容器\n            const container = document.createElement('div');\n            container.style.position = 'relative';\n            container.style.display = 'inline-block';\n            container.style.width = '100%';\n\n            container.appendChild(btn);\n            container.appendChild(popup);\n\n            // 替換輸入框\n            paragraphInput.replaceWith(container);\n\n            // 設置按鈕事件\n            setupParagraphButtonEvents(btn, popup, paragraphInput, newNode);\n          }\n        }\n\n        // 恢復項目列表\n        const itemsContainer = newNode.element.querySelector('.items');\n        if (itemsContainer && nodeData.items) {\n          itemsContainer.innerHTML = '';\n          newNode.outputs = []; // 重置 outputs 數組\n\n          nodeData.items.forEach((itemText, index) => {\n            const newItem = document.createElement('div');\n            newItem.className = 'item';\n            newItem.innerHTML = `\n              <input type=\"text\" class=\"item-text\" value=\"${escapeHtml(itemText || '項目 ' + (index + 1))}\">\n              <button class=\"add-node-btn\">+</button>\n              <div class=\"output-port\" data-type=\"output\"></div>\n            `;\n            itemsContainer.appendChild(newItem);\n\n            newNode.outputs.push(index); // 確保 outputs 數組正確更新\n            setupAddNodeButton(newItem, newNode, index, container);\n            setupOutputPort(newItem, newNode, index, container);\n          });\n        }\n      });\n\n      // 恢復連接\n      projectData.connections?.forEach(conn => {\n        if (nodeMap[conn.fromNode] && nodeMap[conn.toNode]) {\n          connections.push({\n            fromNode: nodeMap[conn.fromNode].id,\n            fromOutput: conn.fromOutput || 0,\n            toNode: nodeMap[conn.toNode].id\n          });\n        }\n      });\n\n      drawConnections();\n      showStatusMessage('項目載入完成', 'success');\n    } catch (error) {\n      console.error('載入失敗:', error);\n      showStatusMessage('載入失敗，請檢查文件格式', 'error');\n    }\n  };\n\n  reader.readAsText(file);\n  event.target.value = '';\n}",
+      "description": "loadProject\n功能\n\n從用戶選擇的文件中載入項目數據，恢復節點、連線、視圖狀態及相關交互元素（如段落按鈕和項目列表），並處理可能的錯誤。\n參數\n\n    event (Event)：文件輸入事件對象，包含用戶選擇的文件信息（event.target.files）。\n\n詳細說明\n\n    文件檢查與讀取：\n        從 event.target.files 獲取第一個文件（file），若無文件則直接返回。\n        創建 FileReader 實例，用於讀取文件內容。\n        設置 reader.onload 回調函數，當文件讀取完成時執行。\n    解析文件內容：\n        在 reader.onload 中，嘗試將文件內容（e.target.result）解析為 JSON 對象（projectData）。\n        使用 try-catch 塊捕獲可能的解析錯誤。\n    清除現有數據：\n        清空節點容器（nodesContainer.innerHTML = ''）。\n        重置全局節點數組（nodes = []）和連線數組（connections = []）。\n    恢復視圖狀態：\n        若 projectData.viewState 存在，恢復縮放比例（scale）和平移量（translateX, translateY），若無則使用預設值：\n            scale：默認為 1。\n            translateX：默認為窗口寬度的一半減 100 像素。\n            translateY：默認為窗口高度的一半減 50 像素。\n        調用 applyTransform 應用視圖變換。\n    恢復節點：\n        創建 nodeMap 對象，用於映射舊節點 ID 到新節點數據。\n        遍歷 projectData.nodes，對每個節點執行：\n            若存在 nodeData.description，將其存入全局 nodeDescriptions（以節點 ID 為鍵）。\n            調用 createNode 創建新節點，傳入坐標（x, y）和標題（title，默認為“節點”）。\n            將新節點存入 nodeMap，以舊 ID 為鍵。\n    恢復段落內容：\n        獲取新節點的段落輸入框（.paragraph-input）。\n        若存在輸入框且 nodeData.content 已定義，將其值設置為 nodeData.content。\n        若 nodeData.isConvertedToButton 為真且內容非空：\n            創建按鈕（button.paragraph-btn），顯示內容前 47 個字符（若超過則加省略號），並存儲原始內容到 dataset.originalContent。\n            創建彈出框（div.paragraph-popup），顯示完整內容。\n            創建容器（div），設置相對定位並包含按鈕和彈出框。\n            用容器替換輸入框。\n            調用 setupParagraphButtonEvents 設置按鈕事件。\n    恢復項目列表：\n        獲取新節點的項目容器（.items）。\n        若存在容器且 nodeData.items 已定義：\n            清空容器內容，重置 newNode.outputs 數組。\n            遍歷 nodeData.items，為每個項目創建 div.item 元素，包含：\n                文本輸入框（.item-text），值為項目文本（經 escapeHtml 轉義，若無則為“項目 X”）。\n                添加節點按鈕（.add-node-btn）。\n                輸出端口（.output-port）。\n            將項目添加到容器，更新 newNode.outputs（添加索引）。\n            為每個項目調用 setupAddNodeButton 和 setupOutputPort，設置按鈕和端口事件。\n    恢復連線：\n        遍歷 projectData.connections，對每個連線檢查 fromNode 和 toNode 是否存在於 nodeMap。\n        若存在，創建新連線對象（包含 fromNode, fromOutput, toNode），並添加到 connections 數組。\n    繪製與狀態更新：\n        調用 drawConnections 重新繪製所有連線。\n        調用 showStatusMessage 顯示“項目載入完成”提示（成功狀態）。\n        若解析失敗，捕獲錯誤，記錄到控制台並顯示“載入失敗，請檢查文件格式”提示（錯誤狀態）。\n    文件讀取與清理：\n        使用 reader.readAsText(file) 讀取文件內容。\n        清空文件輸入框（event.target.value = ''），防止重複觸發。\n\n參數作用\n\n    event：提供文件輸入事件，通過 event.target.files 訪問用戶選擇的文件。\n\n依賴的外部變數/函數\n\n    nodesContainer (HTMLElement)：全局節點容器，用於清空和添加節點。\n    nodes (Array)：全局節點數組，存儲節點數據。\n    connections (Array)：全局連線數組，存儲連線數據。\n    nodeDescriptions (Object)：全局對象，存儲節點描述。\n    scale, translateX, translateY (Number)：全局視圖狀態變數。\n    createNode：創建節點的函數，返回節點數據對象。\n    applyTransform：應用畫布變換的函數。\n    setupParagraphButtonEvents：設置段落按鈕事件的函數。\n    setupAddNodeButton, setupOutputPort：設置項目按鈕和端口事件的函數。\n    drawConnections：繪製連線的函數。\n    showStatusMessage：顯示狀態消息的函數。\n    escapeHtml：HTML 轉義函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "applyTransform",
+        "createNode",
+        "setupParagraphButtonEvents",
+        "escapeHtml",
+        "setupAddNodeButton",
+        "setupOutputPort",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 3797,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 3,
+      "x": -179.54583700000018,
+      "y": 5274.350878000003,
+      "title": "addEventListener 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "click",
+        "wheel",
+        "mousedown",
+        "mouseup",
+        "mousemove",
+        "keyup",
+        "keydown",
+        "input",
+        "resize",
+        "DOMNodeRemoved"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 4,
+      "x": -164.4146340000001,
+      "y": 6182.975030000001,
+      "title": "參數 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 5,
+      "x": 332.97295547016535,
+      "y": 3046.8226617354558,
+      "title": "click 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "document",
+        "btn",
+        "jumpBtn",
+        "copyBtn",
+        "node",
+        "item",
+        "container",
+        "link",
+        "cancelBtn",
+        "confirmBtn",
+        "itemElement"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 6,
+      "x": 353.6013011983471,
+      "y": 4783.664514033064,
+      "title": "wheel 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 7,
+      "x": 353.6013011983471,
+      "y": 4977.879390066122,
+      "title": "mousedown 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 8,
+      "x": 353.6013011983471,
+      "y": 5172.094266099177,
+      "title": "mouseup 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 9,
+      "x": 353.6013011983471,
+      "y": 5366.3091421322315,
+      "title": "mousemove 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.519Z"
+      }
+    },
+    {
+      "id": 10,
+      "x": 353.6013011983471,
+      "y": 5560.52401816529,
+      "title": "keyup 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 11,
+      "x": 353.6013011983471,
+      "y": 5754.738894198343,
+      "title": "keydown 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 12,
+      "x": 353.6013011983471,
+      "y": 5948.953770231401,
+      "title": "input 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 13,
+      "x": 353.6013011983471,
+      "y": 6143.1686462644575,
+      "title": "resize 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 14,
+      "x": 353.6013011983471,
+      "y": 6337.383522297514,
+      "title": "DOMNodeRemoved 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 15,
+      "x": 1163.008673340044,
+      "y": -8859.999586545477,
+      "title": "applyTransform",
+      "content": "function applyTransform() {\n    // 同時更新 transformContainer 和 nodesContainer 的變換\n    transformContainer.style.transform = `\ntranslate(${translateX}px, ${translateY}px)\n  scale(${scale})\n    `;\n    nodesContainer.style.transform = `\ntranslate(${translateX}px, ${translateY}px)\n  scale(${scale})\n    `;\n    drawConnections();\n    updateNodeList();\n  }",
+      "description": "applyTransform\n功能\n\n應用畫布的變換（平移和縮放）到 transformContainer 和 nodesContainer，並更新連線和節點列表的顯示。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    transformContainer (HTMLElement)：用於應用變換的容器元素。\n    nodesContainer (HTMLElement)：包含所有節點的容器元素。\n    translateX, translateY (Number)：畫布的水平和垂直平移量（像素）。\n    scale (Number)：畫布的縮放比例。\n    drawConnections (Function)：繪製連線的函數。\n    updateNodeList (Function)：更新節點列表的函數。\n\n詳細說明\n\n    設置 transformContainer 和 nodesContainer 的 CSS transform 屬性，應用平移（translate(${translateX}px, ${translateY}px)）和縮放（scale(${scale})）。\n    調用 drawConnections 重新繪製所有連線，確保連線與變換後的節點位置一致。\n    調用 updateNodeList 更新節點列表的顯示（具體實現未提供）。\n\n參數作用\n\n    無直接參數，函數通過全局變數控制畫布的視圖狀態。",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "updateNodeList"
+      ],
+      "metadata": {
+        "contentLength": 348,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 16,
+      "x": 904.365597194589,
+      "y": -3995.843950909092,
+      "title": "createNode",
+      "content": "// 主函數\nfunction createNode(x, y, title = '節點') {\n  const node = createNodeElement(x, y, title);\n  const nodeData = initializeNodeData(node, x, y);\n\n  setupNodeDrag(node, nodeData);\n  setupDeleteButton(node, nodeData);\n  setupTitleInput(node);\n  setupParagraphInput(node, nodeData);\n  setupInitialAddButton(node, nodeData);\n  setupAddItemButton(node, nodeData);\n  setupGenerateButton(node, nodeData); // 添加這行\n  setupPortEvents(node, nodeData);\n\n  updateNodePosition(nodeData);\n  return nodeData;\n}",
+      "description": "createNode\n功能\n\n創建新節點，包括 DOM 元素和數據對象，並設置其拖動、刪除、標題輸入、段落輸入、項目添加和端口事件等交互行為。\n參數\n\n    x (Number)：節點的水平坐標（像素）。\n    y (Number)：節點的垂直坐標（像素）。\n    title (String, 可選)：節點的標題，默認為“節點”。\n\n詳細說明\n\n    調用 createNodeElement 創建節點的 DOM 元素，設置位置和標題。\n    調用 initializeNodeData 初始化節點數據對象，包含 ID、坐標等。\n    設置節點的交互行為：\n        setupNodeDrag：設置節點拖動事件。\n        setupDeleteButton：設置刪除按鈕事件。\n        setupTitleInput：設置標題輸入框事件。\n        setupParagraphInput：設置段落輸入框事件。\n        setupInitialAddButton：設置初始添加按鈕事件（未提供實現）。\n        setupAddItemButton：設置新增項目按鈕事件。\n        setupGenerateButton：設置生成按鈕事件（未提供實現）。\n        setupPortEvents：設置輸入/輸出端口事件。\n    調用 updateNodePosition 更新節點位置（未提供實現）。\n    返回節點數據對象（nodeData）。\n\n參數作用\n\n    x, y：指定節點的初始位置，傳遞給 createNodeElement 和 initializeNodeData。\n    title：設置節點的初始標題，若未提供則使用默認值“節點”。\n\n依賴的外部函數\n\n    createNodeElement, initializeNodeData, setupNodeDrag, setupDeleteButton, setupTitleInput, setupParagraphInput, setupInitialAddButton, setupAddItemButton, setupGenerateButton, setupPortEvents, updateNodePosition。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNodeElement",
+        "initializeNodeData",
+        "setupNodeDrag",
+        "setupDeleteButton",
+        "setupTitleInput",
+        "setupParagraphInput",
+        "setupInitialAddButton",
+        "setupAddItemButton",
+        "setupGenerateButton",
+        "setupPortEvents",
+        "updateNodePosition"
+      ],
+      "metadata": {
+        "contentLength": 496,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 17,
+      "x": 964.8449215945909,
+      "y": -905.4474176090922,
+      "title": "setupParagraphButtonEvents",
+      "content": "function setupParagraphButtonEvents(btn, popup, paragraphInput, nodeData) {\n  // 創建COPY按鈕\n  const copyBtn = document.createElement('button');\n  copyBtn.className = 'copy-btn';\n  copyBtn.textContent = '';\n\n  // 創建UPDATE按鈕\n  const updateBtn = document.createElement('button');\n  updateBtn.className = 'update-btn';\n  updateBtn.textContent = '更新';\n  updateBtn.title = '更新內容並調整連接';\n\n  // 將按鈕添加到容器\n  const buttonContainer = document.createElement('div');\n  buttonContainer.style.display = 'flex';\n  buttonContainer.style.alignItems = 'center';\n  buttonContainer.style.marginBottom = '10px';\n  buttonContainer.appendChild(btn.cloneNode(true)); // Clone the original button\n  buttonContainer.appendChild(updateBtn);\n\n  // 替換原始按鈕\n  btn.parentNode.replaceChild(buttonContainer, btn);\n\n  // Get the new button reference\n  const newBtn = buttonContainer.querySelector('.paragraph-btn');\n\n  // 添加COPY按鈕點擊事件\n  copyBtn.addEventListener('click', (e) => {\n    e.stopPropagation();\n    try {\n      navigator.clipboard.writeText(popup.textContent)\n      .then(() => {\n        copyBtn.textContent = '已複製!';\n        setTimeout(() => {\n          copyBtn.textContent = '';\n        }, 2000);\n      })\n      .catch(err => {\n        console.error('複製失敗:', err);\n        copyBtn.textContent = '複製失敗';\n        setTimeout(() => {\n          copyBtn.textContent = '';\n        }, 2000);\n      });\n    } catch (err) {\n      console.error('複製失敗:', err);\n      copyBtn.textContent = '複製失敗';\n      setTimeout(() => {\n        copyBtn.textContent = '';\n      }, 2000);\n    }\n  });\n\n  // 添加UPDATE按鈕點擊事件\n  // 更新按鈕點擊事件\n  updateBtn.addEventListener('click', (e) => {\n    e.stopPropagation();\n    showUpdateDialog(popup.textContent, (newContent) => {\n      if (newContent !== null) {\n        updateNodeContent(nodeData, newContent);\n      }\n    });\n  });\n\n  // 將COPY按鈕添加到彈出框\n  popup.appendChild(copyBtn);\n\n  // 保存原始DOM位置（用於完美還原）\n  const originalParent = popup.parentNode;\n  const originalNextSibling = popup.nextSibling;\n  const originalStyles = {\n    position: popup.style.position,\n    left: popup.style.left,\n    top: popup.style.top,\n    zIndex: popup.style.zIndex\n  };\n\n  // 點擊按鈕顯示彈窗\n  newBtn.addEventListener('click', (e) => {\n    document.body.appendChild(popup);\n    popup.style.position = 'fixed';\n    popup.style.zIndex = '2147483647';\n    popup.style.display = 'block';\n    ALL_ACTIVE_POPUPS.add(popup);\n    activePopup = popup;\n    arrangePopups();\n    e.stopPropagation();\n  });\n\n  // 點擊外部關閉所有彈窗\n  const handleClickOutside = (e) => {\n    let isClickInsideAnyPopup = false;\n\n    // 檢查是否點擊了任何彈窗或其關聯按鈕\n    ALL_ACTIVE_POPUPS.forEach(p => {\n      const relatedBtn = p.previousElementSibling?.classList?.contains('paragraph-btn')\n        ? p.previousElementSibling\n        : null;\n\n      if (p.contains(e.target) || (relatedBtn && relatedBtn.contains(e.target))) {\n        isClickInsideAnyPopup = true;\n      }\n    });\n\n    // 如果點擊在彈窗外部，關閉所有彈窗\n    if (!isClickInsideAnyPopup) {\n      ALL_ACTIVE_POPUPS.forEach(p => {\n        p.style.display = 'none';\n        // 還原原始DOM位置\n        if (originalParent && p.parentNode === document.body) {\n          originalParent.insertBefore(p, originalNextSibling);\n        }\n        // 還原原始樣式\n        Object.entries(originalStyles).forEach(([prop, value]) => {\n          p.style[prop] = value;\n        });\n      });\n      ALL_ACTIVE_POPUPS.clear();\n      activePopup = null;\n    }\n  };\n\n  // X鍵清空功能\n  const clearHandler = (e) => {\n    if (e.key.toLowerCase() === 'x' && activePopup === popup) {\n      paragraphInput.value = '';\n      resetItemsList(nodeData);\n      newBtn.parentElement.replaceWith(paragraphInput);\n      popup.style.display = 'none';\n      ALL_ACTIVE_POPUPS.delete(popup);\n      activePopup = null;\n      e.preventDefault();\n    }\n  };\n\n  // 添加事件監聽\n  document.addEventListener('click', handleClickOutside);\n  document.addEventListener('keydown', clearHandler);\n\n  // 自動清理（防止內存洩漏）\n  popup.addEventListener('DOMNodeRemoved', () => {\n    document.removeEventListener('click', handleClickOutside);\n    document.removeEventListener('keydown', clearHandler);\n    ALL_ACTIVE_POPUPS.delete(popup);\n  });\n}",
+      "description": "setupParagraphButtonEvents\n功能\n\n為段落按鈕設置交互事件，包括複製內容、更新內容、顯示/隱藏彈出框、外部點擊關閉和按鍵清除功能。\n參數\n\n    btn (HTMLElement)：段落按鈕元素（.paragraph-btn）。\n    popup (HTMLElement)：段落彈出框元素（.paragraph-popup）。\n    paragraphInput (HTMLElement)：原始段落輸入框元素（textarea.paragraph-input）。\n    nodeData (Object)：節點數據對象，包含節點 ID 和元素信息。\n\n詳細說明\n\n    創建按鈕：\n        創建複製按鈕（copyBtn）和更新按鈕（updateBtn）。\n        創建按鈕容器（buttonContainer），設置 Flex 佈局，將克隆的段落按鈕和更新按鈕添加到容器。\n        用按鈕容器替換原始按鈕，獲取新按鈕引用（newBtn）。\n    複製按鈕事件：\n        為 copyBtn 添加點擊事件，使用 navigator.clipboard.writeText 複製 popup.textContent。\n        成功時顯示“已複製!”，2 秒後恢復空內容；失敗時顯示“複製失敗”，2 秒後恢復。\n        使用 try-catch 和 catch 處理剪貼板 API 錯誤。\n    更新按鈕事件：\n        為 updateBtn 添加點擊事件，調用 showUpdateDialog 顯示更新對話框。\n        若返回新內容（newContent），調用 updateNodeContent 更新節點內容。\n    彈出框顯示：\n        為 newBtn 添加點擊事件，將 popup 移動到 document.body，設置固定定位和最高 z-index（2147483647），並顯示。\n        將 popup 添加到全局 ALL_ACTIVE_POPUPS（Set），設置為當前活動彈出框（activePopup）。\n        調用 arrangePopups 排列彈出框（未提供實現）。\n    外部點擊關閉：\n        添加全局 click 事件監聽器（handleClickOutside），檢查點擊是否在任何彈出框或其關聯按鈕內。\n        若點擊在外部，隱藏所有彈出框（ALL_ACTIVE_POPUPS），還原其原始 DOM 位置和樣式，清空 ALL_ACTIVE_POPUPS 和 activePopup。\n    按鍵清除功能：\n        添加全局 keydown 事件監聽器（clearHandler），當按下 'x' 鍵且 popup 是活動彈出框時：\n            清空 paragraphInput 值。\n            調用 resetItemsList 重置項目列表。\n            用 paragraphInput 替換按鈕容器。\n            隱藏 popup，從 ALL_ACTIVE_POPUPS 移除，清除 activePopup。\n    資源清理：\n        為 popup 添加 DOMNodeRemoved 事件監聽器，當移除時解除 click 和 keydown 事件監聽器，並從 ALL_ACTIVE_POPUPS 移除。\n\n參數作用\n\n    btn：提供原始段落按鈕，用於克隆和替換。\n    popup：提供彈出框元素，用於顯示內容和添加複製按鈕。\n    paragraphInput：提供原始輸入框，用於還原和清空操作。\n    nodeData：提供節點數據，用於更新內容和重置項目列表。\n\n依賴的外部變數/函數\n\n    ALL_ACTIVE_POPUPS (Set)：全局集合，跟踪所有活動彈出框。\n    activePopup (HTMLElement)：當前活動彈出框。\n    showUpdateDialog, updateNodeContent, arrangePopups, resetItemsList：處理更新對話框、節點內容更新、彈出框排列和項目列表重置的函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "showUpdateDialog",
+        "updateNodeContent",
+        "arrangePopups",
+        "resetItemsList"
+      ],
+      "metadata": {
+        "contentLength": 4114,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 18,
+      "x": 929.9041000000003,
+      "y": 407.2460399999998,
+      "title": "escapeHtml",
+      "content": "// HTML转义辅助函数\nfunction escapeHtml(unsafe) {\n  return unsafe\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\")\n  .replace(/\"/g, \"&quot;\")\n  .replace(/'/g, \"&#039;\");\n}",
+      "description": "escapeHtml（重複）\n功能\n\n對輸入字符串進行 HTML 轉義，防止 XSS 攻擊。\n參數\n\n    unsafe (String)：需要轉義的字符串。\n\n詳細說明\n\n    將特殊字符替換為 HTML 實體（&, <, >, \", '）。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 192,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 19,
+      "x": 928.9950090909093,
+      "y": 605.882403636364,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "description": "setupAddNodeButton（重複）\n功能\n\n為項目元素的添加節點按鈕設置點擊事件，創建新節點並建立連線。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 20,
+      "x": 929.9041000000003,
+      "y": 877.2460400000006,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 21,
+      "x": 929.9041000000003,
+      "y": 1112.2460400000004,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 22,
+      "x": 1503.4296062476333,
+      "y": -8958.9343956364,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 23,
+      "x": 1503.1666460673177,
+      "y": -8731.661668363657,
+      "title": "updateNodeList",
+      "content": "// 更新節點列表 - 優化版本\nfunction updateNodeList() {\n  const nodeList = document.getElementById('node-list');\n  if (!nodeList) return;\n  \n  requestAnimationFrame(() => {\n    const visibleNodes = getVisibleNodes();\n    const visibleNodeIds = visibleNodes.map(n => n.id).join(',');\n    const lastVisibleNodeIds = (lastVisibleNodes || []).map(n => n.id).join(',');\n    \n    if (visibleNodeIds === lastVisibleNodeIds) return;\n    \n    saveCurrentDescriptions();\n    \n    // 建立節點名稱到描述的映射\n    const nameToDescriptionMap = {};\n    nodes.forEach(node => {\n      const title = node.element.querySelector('.node-title')?.value || '未命名節點';\n      if (nodeDescriptions[node.id] && nodeDescriptions[node.id].trim() !== '') {\n        // 如果這個節點有描述，記錄到映射中\n        nameToDescriptionMap[title] = nodeDescriptions[node.id];\n      }\n    });\n    \n    const fragment = document.createDocumentFragment();\n    \n    visibleNodes.forEach(node => {\n      const nodeElement = document.createElement('div');\n      nodeElement.className = 'node-list-item';\n      \n      const title = node.element.querySelector('.node-title')?.value || '未命名節點';\n      \n      // 檢查是否有相同名稱的節點已經有描述\n      let description = nodeDescriptions[node.id] || '';\n      if (!description.trim() && nameToDescriptionMap[title]) {\n        // 如果當前節點沒有描述，但相同名稱的節點有描述，則使用該描述\n        description = nameToDescriptionMap[title];\n        nodeDescriptions[node.id] = description; // 更新節點描述資料\n      }\n      \n      nodeElement.innerHTML = `\n        <div class=\"node-list-name\">${escapeHtml(title)}</div>\n        <textarea class=\"node-list-description\" data-node-id=\"${node.id}\" \n          placeholder=\"輸入節點描述...\">${escapeHtml(description)}</textarea>\n      `;\n      \n      const descInput = nodeElement.querySelector('.node-list-description');\n      descInput.addEventListener('input', () => {\n        const newDescription = descInput.value;\n        nodeDescriptions[descInput.dataset.nodeId] = newDescription;\n        \n        // 當描述變更時，更新所有同名節點的描述\n        if (newDescription.trim() !== '') {\n          const currentTitle = node.element.querySelector('.node-title')?.value || '未命名節點';\n          nodes.forEach(n => {\n            const nTitle = n.element.querySelector('.node-title')?.value || '未命名節點';\n            if (nTitle === currentTitle && n.id !== node.id) {\n              nodeDescriptions[n.id] = newDescription;\n            }\n          });\n           syncDescriptionsForSameNameNodes(descInput.dataset.nodeId);\n          // 觸發重新渲染節點列表\n          updateNodeList();\n        }\n      });\n      \n      fragment.appendChild(nodeElement);\n    });\n    \n    nodeList.innerHTML = '';\n    nodeList.appendChild(fragment);\n    lastVisibleNodes = visibleNodes;\n  });\n}",
+      "description": "updateNodeList\n功能\n\n更新節點列表的顯示，僅渲染可見節點，同步節點描述，並支援同名節點的描述共享，使用 requestAnimationFrame 優化性能。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodeList (HTMLElement)：節點列表的 DOM 元素（ID 為 node-list）。\n    nodes (Array)：節點數組，包含節點數據和 DOM 元素。\n    nodeDescriptions (Object)：節點描述對象，以節點 ID 為鍵。\n    lastVisibleNodes (Array)：上次渲染的可見節點數組，用於比較避免重複渲染。\n    getVisibleNodes (Function)：獲取當前可見節點的函數。\n    saveCurrentDescriptions (Function)：保存當前描述的函數。\n    syncDescriptionsForSameNameNodes (Function)：同步同名節點描述的函數。\n    escapeHtml (Function)：HTML 轉義函數。\n\n詳細說明\n\n    檢查節點列表：\n        若 nodeList 不存在，直接返回。\n    使用 requestAnimationFrame：\n        將渲染操作封裝在 requestAnimationFrame 中，確保 DOM 更新與瀏覽器渲染同步，優化性能。\n    比較可見節點：\n        調用 getVisibleNodes 獲取當前可見節點（visibleNodes）。\n        將可見節點的 ID 拼接為字符串（visibleNodeIds），與上次可見節點的 ID 字符串（lastVisibleNodeIds）比較。\n        若兩者相同，則無需更新，直接返回。\n    保存描述：\n        調用 saveCurrentDescriptions 保存當前節點描述。\n    建立名稱到描述的映射：\n        創建 nameToDescriptionMap，遍歷 nodes，若節點有非空描述（nodeDescriptions[node.id]），則以節點標題（.node-title 值，默認“未命名節點”）為鍵記錄描述。\n    生成節點列表：\n        使用 DocumentFragment 減少 DOM 操作次數。\n        遍歷 visibleNodes，為每個節點創建 div.node-list-item 元素，包含：\n            標題（div.node-list-name）：顯示節點標題，經 escapeHtml 轉義。\n            描述輸入框（textarea.node-list-description）：顯示節點描述（從 nodeDescriptions[node.id] 或 nameToDescriptionMap[title] 獲取），設置 data-node-id 屬性。\n        若節點無描述但同名節點有描述，則使用共享描述並更新 nodeDescriptions。\n    設置描述輸入事件：\n        為每個描述輸入框添加 input 事件監聽器：\n            更新 nodeDescriptions[descInput.dataset.nodeId] 為新描述。\n            若新描述非空，遍歷 nodes，將同名節點（標題相同但 ID 不同）的描述同步為新描述。\n            調用 syncDescriptionsForSameNameNodes 進一步同步描述。\n            調用 updateNodeList 觸發重新渲染。\n    更新 DOM：\n        清空 nodeList 內容，將 fragment 添加到 nodeList。\n        更新 lastVisibleNodes 為當前可見節點。\n\n參數作用\n\n    無直接參數，函數通過全局變數訪問節點數據和 DOM 元素，動態更新節點列表。\n\n依賴的外部變數/函數\n\n    nodeList：節點列表容器。\n    nodes, nodeDescriptions, lastVisibleNodes：節點和描述數據。\n    getVisibleNodes, saveCurrentDescriptions, syncDescriptionsForSameNameNodes, escapeHtml：輔助函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "getVisibleNodes",
+        "saveCurrentDescriptions",
+        "escapeHtml",
+        "syncDescriptionsForSameNameNodes"
+      ],
+      "metadata": {
+        "contentLength": 2681,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 24,
+      "x": 1860.6051460673139,
+      "y": -9093.292168363681,
+      "title": "getVisibleNodes",
+      "content": "// 獲取當前可見的節點（修正座標版本）\nfunction getVisibleNodes() {\n  // 1. 獲取視口可見區域（不考慮左側面板，使用整個視窗）\n  const viewport = {\n    left: 0,\n    right: window.innerWidth,\n    top: 0,\n    bottom: window.innerHeight\n  };\n\n  return nodes.filter(node => {\n    // 2. 直接使用getBoundingClientRect獲取屏幕座標\n    const rect = node.element.getBoundingClientRect();\n    \n    // 3. 檢查節點是否在視口內（完全精確判斷）\n    const isVisible = (\n      rect.right > viewport.left &&\n      rect.left < viewport.right &&\n      rect.bottom > viewport.top &&\n      rect.top < viewport.bottom\n    );\n\n    // 4. 控制名稱顯示（直接基於屏幕座標判斷）\n    const nameElement = node.element.querySelector('.node-name');\n    if (nameElement) {\n      nameElement.style.display = isVisible ? 'block' : 'none';\n    }\n\n    // 5. 返回節點是否在緩衝區內（用於渲染優化）\n    const buffer = -200; // 屏幕像素緩衝\n    const inBufferArea = (\n      rect.right > (viewport.left - buffer) &&\n      rect.left < (viewport.right + buffer) &&\n      rect.bottom > (viewport.top - buffer) &&\n      rect.top < (viewport.bottom + buffer)\n    );\n\n    return inBufferArea;\n  });\n}",
+      "description": "getVisibleNodes\n功能\n\n獲取當前視口內及緩衝區範圍內的可見節點，根據節點的屏幕坐標判斷可見性，並動態控制節點名稱的顯示狀態。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    window.innerWidth, window.innerHeight (Number)：瀏覽器視窗的寬度和高度，用於定義視口範圍。\n\n詳細說明\n\n    定義視口範圍：\n        創建 viewport 對象，表示視窗的邊界：\n            left: 0, right: window.innerWidth：水平範圍覆蓋整個視窗。\n            top: 0, bottom: window.innerHeight：垂直範圍覆蓋整個視窗。\n        註釋提到“不考慮左側面板”，確保視口基於整個視窗而非特定容器。\n    過濾節點：\n        使用 nodes.filter 遍歷全局節點數組，對每個節點執行以下操作。\n    計算屏幕坐標：\n        使用 node.element.getBoundingClientRect() 獲取節點的屏幕坐標（rect），包括 left, right, top, bottom。\n    判斷可見性：\n        檢查節點是否在視口內（isVisible），條件為：\n            rect.right > viewport.left：節點右邊界在視口左邊界右側。\n            rect.left < viewport.right：節點左邊界在視口右邊界左側。\n            rect.bottom > viewport.top：節點底邊界在視口頂邊界下側。\n            rect.top < viewport.bottom：節點頂邊界在視口底邊界上側。\n        這確保節點至少部分在視口內。\n    控制名稱顯示：\n        查找節點的 .node-name 元素（名稱顯示元素）。\n        若存在，根據 isVisible 設置其 display 樣式為 block（可見）或 none（隱藏）。\n    緩衝區判斷：\n        定義緩衝區（buffer: -200），將視口範圍擴展 200 像素（負值表示向外擴展）。\n        檢查節點是否在擴展後的緩衝區內（inBufferArea），條件類似可見性判斷，但使用 viewport.left - buffer 等擴展邊界。\n        返回 inBufferArea，確保返回的節點包括視口外但接近視口的節點（用於渲染優化）。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 和視窗尺寸動態計算可見節點。\n\n依賴的外部變數\n\n    nodes：提供節點數據，必須包含有效的 element 屬性。\n    window.innerWidth, window.innerHeight：提供視窗尺寸。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1038,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 25,
+      "x": 1860.6051460673139,
+      "y": -8858.292168363663,
+      "title": "saveCurrentDescriptions",
+      "content": "// 保存當前描述\nfunction saveCurrentDescriptions() {\n  document.querySelectorAll('.node-list-description').forEach(input => {\n    nodeDescriptions[input.dataset.nodeId] = input.value;\n  });\n}",
+      "description": "saveCurrentDescriptions\n功能\n\n保存節點列表中所有描述輸入框的當前值到全局 nodeDescriptions 對象。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodeDescriptions (Object)：全局對象，存儲節მო�\n\nSystem: 節點描述，以節點 ID 為鍵。\n\n    document.querySelectorAll：DOM API，用於選擇所有 .node-list-description 元素。\n\n詳細說明\n\n    使用 document.querySelectorAll('.node-list-description') 選擇所有節點列表中的描述輸入框（textarea 元素）。\n    遍歷每個輸入框，將其 value 保存到 nodeDescriptions 中，以 input.dataset.nodeId 作為鍵。\n\n參數作用\n\n    無直接參數，函數直接操作 DOM 元素和全局 nodeDescriptions。\n\n依賴的外部變數\n\n    nodeDescriptions：全局對象，存儲節點描述。\n    document.querySelectorAll：DOM API。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 185,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 26,
+      "x": 1861.6051460673139,
+      "y": -8623.29216836366,
+      "title": "escapeHtml",
+      "content": "// HTML转义辅助函数\nfunction escapeHtml(unsafe) {\n  return unsafe\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\")\n  .replace(/\"/g, \"&quot;\")\n  .replace(/'/g, \"&#039;\");\n}",
+      "description": "escapeHtml（重複）\n功能\n\n對輸入字符串進行 HTML 轉義，防止 XSS 攻擊。\n參數\n\n    unsafe (String)：需要轉義的字符串。\n\n詳細說明\n\n    將特殊字符替換為 HTML 實體（&, <, >, \", '）。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 192,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 27,
+      "x": 1860.6051460673139,
+      "y": -8388.292168363652,
+      "title": "syncDescriptionsForSameNameNodes",
+      "content": "function syncDescriptionsForSameNameNodes(nodeId) {\n  const node = nodes[nodeId];\n  if (!node) return;\n  \n  const title = node.element.querySelector('.node-title')?.value || '未命名節點';\n  const description = nodeDescriptions[nodeId];\n  \n  if (description && description.trim() !== '') {\n    // 更新所有同名節點的描述\n    nodes.forEach(n => {\n      if (n.id !== nodeId) {\n        const nTitle = n.element.querySelector('.node-title')?.value || '未命名節點';\n        if (nTitle === title) {\n          nodeDescriptions[n.id] = description;\n        }\n      }\n    });\n  }\n}",
+      "description": "syncDescriptionsForSameNameNodes\n功能\n\n根據指定節點的 ID，同步具有相同標題的節點的描述，將當前節點的描述應用到所有同名節點。\n參數\n\n    nodeId (Number 或 String)：節點的唯一標識，用於查找目標節點及其描述。\n\n詳細說明\n\n    查找節點：\n        從全局 nodes 數組中獲取指定 nodeId 的節點（nodes[nodeId]）。\n        若節點不存在（!node），則直接返回，終止函數執行。\n    獲取標題和描述：\n        獲取節點的標題，從節點的 .node-title 輸入框中提取值（node.element.querySelector('.node-title')?.value），若無效則默認為“未命名節點”。\n        獲取節點的描述，從全局 nodeDescriptions 對象中提取 nodeDescriptions[nodeId]。\n    同步描述：\n        檢查描述是否存在且非空（description && description.trim() !== ''）。\n        若條件滿足，遍歷 nodes 數組，對每個節點執行：\n            若節點 ID 不同（n.id !== nodeId），獲取其標題（.node-title 值，默認為“未命名節點”）。\n            若標題與目標節點標題相同（nTitle === title），將其描述（nodeDescriptions[n.id]）更新為當前節點的描述（description）。\n\n參數作用\n\n    nodeId：指定需要同步描述的節點 ID，用於定位目標節點及其標題和描述。\n\n依賴的外部變數\n\n    nodes (Array)：全局節點數組，包含節點數據（id, element 等）。\n    nodeDescriptions (Object)：全局對象，存儲節點描述，以節點 ID 為鍵。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 549,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 28,
+      "x": 1427.497500794589,
+      "y": -8082.510358909097,
+      "title": "createNodeElement",
+      "content": "// 创建节点DOM元素\nfunction createNodeElement(x, y, title) {\n  const node = document.createElement('div');\n  node.className = 'node';\nnode.style.left = `${x}px`;\nnode.style.top = `${y}px`;\n  node.innerHTML = `\n\n  <div class=\"node-header\">\n  <button class=\"jump-to-btn hidden\" title=\"跳轉到同名節點\"></button>\n  <div class=\"input-port\" data-type=\"input\"></div>\n<input type=\"text\" class=\"node-title\" value=\"${title}\">\n  <button class=\"delete-node-btn\">×</button>\n  </div>\n  <textarea class=\"paragraph-input\" placeholder=\"貼上段落內容...\"></textarea>\n  <div class=\"items\">\n  <div class=\"item\">\n  <input type=\"text\" class=\"item-text\" value=\"\">\n  <button class=\"add-node-btn\">+</button>\n  <div class=\"output-port\" data-type=\"output\"></div>\n  </div>\n  </div>\n<div class=\"buttons-container\">\n  <button class=\"add-item-btn\">新加項目</button>\n  <button class=\"generate-btn\">一次生成</button>\n</div>\n  `;\n  nodesContainer.appendChild(node);\n  return node;\n}",
+      "description": "createNodeElement\n功能\n\n創建並返回一個節點的 DOM 元素，設置其位置和標題，包含標題區域、段落輸入框、項目列表和操作按鈕。\n參數\n\n    x (Number)：節點的水平坐標（像素），設置為 CSS left 屬性。\n    y (Number)：節點的垂直坐標（像素），設置為 CSS top 屬性。\n    title (String)：節點的標題，設置為標題輸入框的值。\n\n詳細說明\n\n    創建 <div> 元素，類名為 node，設置 CSS 位置（left: ${x}px, top: ${y}px）。\n    設置內部 HTML 結構，包含：\n        標題區域（.node-header）：包含跳轉按鈕（.jump-to-btn）、輸入端口（.input-port）、標題輸入框（.node-title）和刪除按鈕（.delete-node-btn）。\n        段落輸入框（textarea.paragraph-input）。\n        項目容器（.items）：包含單個項目（.item），內含文本輸入框（.item-text）、添加節點按鈕（.add-node-btn）和輸出端口（.output-port）。\n        按鈕容器（.buttons-container）：包含新增項目按鈕（.add-item-btn）和生成按鈕（.generate-btn）。\n    將節點添加到全局 nodesContainer。\n    返回節點元素。\n\n參數作用\n\n    x, y：指定節點在畫布上的初始位置。\n    title：設置標題輸入框的初始值。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 920,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 29,
+      "x": 1427.497500794589,
+      "y": -7886.510358909095,
+      "title": "initializeNodeData",
+      "content": "// 初始化节点数据\nfunction initializeNodeData(node, x, y) {\n  const nodeData = {\n    element: node,\n    id: nodes.length,\n    outputs: [0],\n    x,\n    y,\n    jumpIndex: 0 // 新增跳轉索引\n  };\n  nodes.push(nodeData);\n\n  // 設置跳轉按鈕事件\n  const jumpBtn = node.querySelector('.jump-to-btn');\n  jumpBtn.addEventListener('click', (e) => {\n    jumpToSameNameNode(nodeData);\n    e.stopPropagation();\n  });\n\n  return nodeData;\n}",
+      "description": "initializeNodeData\n功能\n\n初始化節點數據對象，設置其屬性並綁定跳轉按鈕事件，將數據添加到全局 nodes 數組。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素。\n    x (Number)：節點的水平坐標。\n    y (Number)：節點的垂直坐標。\n\n詳細說明\n\n    創建 nodeData 對象，包含 element, id（基於 nodes.length）、outputs（初始為 [0]）、x, y 和 jumpIndex（初始為 0）。\n    將 nodeData 添加到 nodes 數組。\n    為 .jump-to-btn 綁定點擊事件，調用 jumpToSameNameNode，並阻止事件冒泡。\n    返回 nodeData。\n\n參數作用\n\n    node：提供節點元素，用於數據關聯和事件綁定。\n    x, y：存儲節點坐標。",
+      "isConvertedToButton": true,
+      "items": [
+        "jumpToSameNameNode"
+      ],
+      "metadata": {
+        "contentLength": 403,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 30,
+      "x": 1432.497500794589,
+      "y": -7691.510358909095,
+      "title": "setupNodeDrag",
+      "content": "// 设置节点拖拽\nfunction setupNodeDrag(node, nodeData) {\n  node.addEventListener('mousedown', (e) => {\n    if (e.target.className.includes('node') || e.target.className === 'node-title') {\n      if (spacePressed || e.button === 1) return;\n\n      draggingNode = nodeData;\n      dragStartWorldX = toWorldX(e.clientX);\n      dragStartWorldY = toWorldY(e.clientY);\n      dragOffsetX = dragStartWorldX - nodeData.x;\n      dragOffsetY = dragStartWorldY - nodeData.y;\n\n      e.stopPropagation();\n    }\n  });\n}",
+      "description": "setupNodeDrag\n功能\n\n為節點設置拖動事件，啟動拖動操作並記錄初始拖動位置。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，用於綁定拖動事件。\n    nodeData (Object)：節點數據對象，包含坐標和 ID，用於更新拖動狀態。\n\n詳細說明\n\n    為 node 添加 mousedown 事件監聽器，檢查觸發元素是否為節點本身（className.includes('node')）或標題輸入框（className === 'node-title'）。\n    若按下空格鍵（spacePressed）或使用中鍵（e.button === 1），則忽略事件。\n    設置全局 draggingNode 為當前 nodeData。\n    使用 toWorldX 和 toWorldY 將鼠標屏幕坐標（e.clientX, e.clientY）轉換為世界坐標，存儲為 dragStartWorldX 和 dragStartWorldY。\n    計算拖動偏移（dragOffsetX, dragOffsetY），表示鼠標相對於節點坐標的偏移。\n    使用 e.stopPropagation 阻止事件冒泡。\n\n參數作用\n\n    node：提供 DOM 元素，用於綁定拖動事件。\n    nodeData：提供節點數據，用於記錄拖動狀態和坐標。\n\n依賴的外部變數/函數\n\n    spacePressed (Boolean)：全局變數，表示空格鍵是否按下。\n    draggingNode (Object)：全局變數，記錄當前拖動的節點。\n    dragStartWorldX, dragStartWorldY, dragOffsetX, dragOffsetY (Number)：全局變數，記錄拖動起始位置和偏移。\n    toWorldX, toWorldY (Function)：將屏幕坐標轉換為世界坐標。",
+      "isConvertedToButton": true,
+      "items": [
+        "toWorldX",
+        "toWorldY"
+      ],
+      "metadata": {
+        "contentLength": 496,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 31,
+      "x": 1410.4142007945902,
+      "y": -6971.092258909096,
+      "title": "setupDeleteButton",
+      "content": "// 修改刪除節點函數\nfunction setupDeleteButton(node, nodeData) {\n  node.querySelector('.delete-node-btn').addEventListener('click', (e) => {\n    // 移除所有與該節點相關的連接\n    connections = connections.filter(conn =>\n    conn.fromNode !== nodeData.id && conn.toNode !== nodeData.id\n    );\n\n    // 重新索引節點ID\n    nodes = nodes.filter(n => n.id !== nodeData.id);\n    nodes.forEach((n, index) => {\n      n.id = index; // 重新分配連續的ID\n    });\n\n    // 更新連接中的節點ID引用\n    connections.forEach(conn => {\n      if (conn.fromNode > nodeData.id) conn.fromNode--;\n      if (conn.toNode > nodeData.id) conn.toNode--;\n    });\n\n    node.remove();\n    drawConnections();\n    updateSameNameHighlights(); // 刪除後更新高亮\n    e.stopPropagation();\n  });\n}",
+      "description": "setupDeleteButton\n功能\n\n為節點的刪除按鈕設置點擊事件，移除節點及其相關連線，更新節點 ID 和連線引用，並刷新畫面。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含刪除按鈕。\n    nodeData (Object)：節點數據對象，包含 ID 和其他屬性。\n\n詳細說明\n\n    為 .delete-node-btn 添加點擊事件：\n        過濾 connections，移除與當前節點相關的連線（fromNode 或 toNode 等於 nodeData.id）。\n        過濾 nodes，移除當前節點（n.id !== nodeData.id）。\n        重新分配節點 ID，遍歷 nodes 並設置 n.id = index。\n        更新 connections 中的節點 ID 引用，若 fromNode 或 toNode 大於 nodeData.id，則減 1。\n        移除節點元素（node.remove()）。\n        調用 drawConnections 刷新連線畫面。\n        調用 updateSameNameHighlights 更新同名節點高亮狀態。\n        使用 e.stopPropagation 阻止事件冒泡。\n\n參數作用\n\n    node：提供節點元素，用於綁定刪除按鈕事件和移除 DOM。\n    nodeData：提供節點 ID，用於過濾連線和節點。\n\n依賴的外部變數/函數\n\n    connections (Array)：全局連線數組。\n    nodes (Array)：全局節點數組。\n    drawConnections (Function)：繪製連線。\n    updateSameNameHighlights (Function)：更新同名節點高亮。",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "updateSameNameHighlights"
+      ],
+      "metadata": {
+        "contentLength": 705,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 32,
+      "x": 1381.6459107945893,
+      "y": -6528.940658909102,
+      "title": "setupTitleInput",
+      "content": "// 设置标题输入\nfunction setupTitleInput(node) {\n  const titleInput = node.querySelector('.node-title');\n  titleInput.addEventListener('input', () => {\n    titleInput.value = titleInput.value.trim();\n    \n    // 檢查是否有相同名稱的節點已經有描述\n    const nodeData = findNodeByElement(node);\n    if (nodeData) {\n      const sameNameNodes = nodes.filter(n => \n        n.id !== nodeData.id &&\n        n.element.querySelector('.node-title').value === titleInput.value\n      );\n      \n      if (sameNameNodes.length > 0 && !nodeDescriptions[nodeData.id]) {\n        // 使用第一個同名節點的描述\n        const firstSameNameNode = sameNameNodes[0];\n        if (nodeDescriptions[firstSameNameNode.id]) {\n          nodeDescriptions[nodeData.id] = nodeDescriptions[firstSameNameNode.id];\n          updateNodeList(); // 觸發更新\n        }\n      }\n    }\n    \n    updateSameNameHighlights();\n   \n    if (nodeData) {\n      nodeData.jumpIndex = 0;\n      updateJumpButton(nodeData);\n    }\n    nodes.forEach(n => updateJumpButton(n));\n  });\n\n  const nodeData = findNodeByElement(node);\n  if (nodeData) {\n    updateJumpButton(nodeData);\n  }\n}",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "findNodeByElement",
+        "updateNodeList",
+        "updateSameNameHighlights",
+        "updateJumpButton"
+      ],
+      "metadata": {
+        "contentLength": 1085,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 33,
+      "x": 1394.7137107945887,
+      "y": -5802.998858909096,
+      "title": "setupParagraphInput",
+      "content": "// 设置段落输入\nfunction setupParagraphInput(node, nodeData) {\n  const paragraphInput = node.querySelector('.paragraph-input');\n  paragraphInput.addEventListener('input', function() {\n    handleParagraphInput(this, node, nodeData);\n  });\n}",
+      "description": "setupParagraphInput\n功能\n\n為節點的段落輸入框設置輸入事件監聽器，當輸入內容變化時觸發處理邏輯。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含段落輸入框（.paragraph-input）。\n    nodeData (Object)：節點數據對象，包含節點 ID、坐標等信息。\n\n詳細說明\n\n    查找節點中的段落輸入框（textarea.paragraph-input）。\n    為輸入框添加 input 事件監聽器，當用戶輸入內容時，調用 handleParagraphInput，傳遞輸入框（this）、節點（node）和節點數據（nodeData）。\n\n參數作用\n\n    node：提供節點元素，用於查找輸入框。\n    nodeData：提供節點數據，傳遞給處理函數以支持後續邏輯。\n\n依賴的外部變數/函數\n\n    handleParagraphInput (Function)：處理段落輸入變化的函數（未提供實現）。",
+      "isConvertedToButton": true,
+      "items": [
+        "handleParagraphInput"
+      ],
+      "metadata": {
+        "contentLength": 233,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 34,
+      "x": 1368.1724971945882,
+      "y": -4461.529050909096,
+      "title": "setupInitialAddButton",
+      "content": "// 设置初始添加按钮\nfunction setupInitialAddButton(node, nodeData) {\n  node.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    handleAddNodeClick(nodeData, 0, e);\n  });\n}",
+      "description": "setupInitialAddButton\n功能\n\n為節點的初始添加節點按鈕設置點擊事件，觸發添加新節點的處理邏輯。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含添加按鈕（.add-node-btn）。\n    nodeData (Object)：節點數據對象，包含節點 ID 等信息。\n\n詳細說明\n\n    查找節點中的添加節點按鈕（button.add-node-btn）。\n    為按鈕添加 click 事件監聽器，調用 handleAddNodeClick，傳遞節點數據（nodeData）、輸出端口索引（固定為 0）和事件對象（e）。\n\n參數作用\n\n    node：提供節點元素，用於查找按鈕。\n    nodeData：提供節點數據，傳遞給處理函數。\n\n依賴的外部變數/函數\n\n    handleAddNodeClick (Function)：處理添加節點點擊的函數（未提供實現）。",
+      "isConvertedToButton": true,
+      "items": [
+        "handleAddNodeClick"
+      ],
+      "metadata": {
+        "contentLength": 181,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 35,
+      "x": 1390.7744971945885,
+      "y": -3984.866050909096,
+      "title": "setupAddItemButton",
+      "content": "// 设置添加项目按钮\nfunction setupAddItemButton(node, nodeData) {\n  node.querySelector('.add-item-btn').addEventListener('click', () => {\n    addNewItem(node, nodeData);\n  });\n}",
+      "description": "setupAddItemButton\n功能\n\n為節點的新增項目按鈕設置點擊事件，觸發添加新項目的邏輯。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含新增項目按鈕（.add-item-btn）。\n    nodeData (Object)：節點數據對象，包含節點 ID 等信息。\n\n詳細說明\n\n    查找節點中的新增項目按鈕（button.add-item-btn）。\n    為按鈕添加 click 事件監聽器，調用 addNewItem，傳遞節點（node）和節點數據（nodeData）。\n\n參數作用\n\n    node：提供節點元素，用於查找按鈕。\n    nodeData：提供節點數據，傳遞給處理函數。\n\n依賴的外部變數/函數\n\n    addNewItem (Function)：添加新項目的函數（未提供實現）。",
+      "isConvertedToButton": true,
+      "items": [
+        "addNewItem"
+      ],
+      "metadata": {
+        "contentLength": 169,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 36,
+      "x": 1377.7634971945881,
+      "y": -3408.9400509090947,
+      "title": "setupGenerateButton",
+      "content": "function setupGenerateButton(node, nodeData) {\n  node.querySelector('.generate-btn').addEventListener('click', () => {\n    // 獲取所有項目\n    const items = node.querySelectorAll('.item');\n    \n    // 計算基礎位置\n    const baseX = nodeData.x + 200 / scale;\n    let baseY = nodeData.y;\n    \n    // 為每個項目創建子節點\n    items.forEach((item, index) => {\n      const itemText = item.querySelector('.item-text').value;\n      \n      // 創建新節點\n      const newNode = createNode(\n        baseX,\n        baseY,\n        itemText + ' 節點'\n      );\n      \n      // 添加連接\n      connections.push({\n        fromNode: nodeData.id,\n        fromOutput: index,\n        toNode: newNode.id\n      });\n      \n      // 更新下一個節點的Y位置\n      baseY += 235 / scale;\n    });\n    \n    drawConnections();\n  });\n}",
+      "description": "setupGenerateButton\n功能\n\n為節點的生成按鈕設置點擊事件，根據項目列表為每個項目創建子節點並建立連線。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含生成按鈕（.generate-btn）和項目列表（.item）。\n    nodeData (Object)：節點數據對象，包含節點 ID、坐標等信息。\n\n詳細說明\n\n    獲取項目：\n        查找節點中的所有項目元素（div.item）。\n    計算基礎位置：\n        計算新節點的基礎水平坐標（baseX）：當前節點 x 坐標加 200 像素（考慮縮放比例）。\n        初始化基礎垂直坐標（baseY）為當前節點 y 坐標。\n    創建子節點：\n        遍歷項目列表，對每個項目執行：\n            獲取項目文本（.item-text 的值）。\n            調用 createNode 創建新節點，位置為 (baseX, baseY)，標題為項目文本加“節點”後綴。\n            添加連線到 connections，連接當前節點（fromNode: nodeData.id）、當前輸出端口（fromOutput: index）和新節點（toNode: newNode.id）。\n            更新下一個節點的垂直坐標（baseY += 235 / scale），確保子節點垂直排列。\n    刷新連線：\n        調用 drawConnections 重新繪製所有連線。\n\n參數作用\n\n    node：提供節點元素，用於查找按鈕和項目。\n    nodeData：提供節點數據，用於計算新節點位置和建立連線。\n\n依賴的外部變數/函數\n\n    scale (Number)：全局縮放比例。\n    connections (Array)：全局連線數組。\n    createNode (Function)：創建新節點。\n    drawConnections (Function)：繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 757,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 37,
+      "x": 1377.4224971945878,
+      "y": -2915.7150509090934,
+      "title": "手etupPortEvents",
+      "content": "// 设置端口事件\nfunction setupPortEvents(node, nodeData) {\n  // 输入端口\n  node.querySelector('.input-port').addEventListener('mouseup', (e) => {\n    if (connecting) {\n      connections.push( {\n        fromNode: connecting.fromNode,\n        fromOutput: connecting.fromOutput,\n        toNode: nodeData.id\n      });\n      connecting = null;\n      container.classList.remove('connecting');\n      drawConnections();\n    }\n  });\n\n  // 初始输出端口\n  setupOutputPort(node.querySelector('.output-port'), nodeData, 0);\n}",
+      "description": "setupPortEvents\n功能\n\n為節點的輸入端口和初始輸出端口設置事件監聽器，處理連線的建立。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含輸入端口（.input-port）和輸出端口（.output-port）。\n    nodeData (Object)：節點數據對象，包含節點 ID 等信息。\n\n詳細說明\n\n    輸入端口事件：\n        查找節點中的輸入端口（div.input-port）。\n        為輸入端口添加 mouseup 事件監聽器，當事件觸發時檢查是否存在正在進行的連線（connecting）。\n        若存在連線：\n            創建新連線對象，包含起始節點（fromNode）、輸出端口索引（fromOutput）和目標節點（toNode: nodeData.id）。\n            將連線添加到全局 connections 數組。\n            清空 connecting 狀態。\n            移除容器（container）的 connecting 類。\n            調用 drawConnections 刷新連線畫面。\n    輸出端口事件：\n        查找節點中的初始輸出端口（div.output-port）。\n        調用 setupOutputPort，為輸出端口設置事件，傳遞端口元素、節點數據和輸出端口索引（固定為 0）。\n\n參數作用\n\n    node：提供節點元素，用於查找輸入和輸出端口。\n    nodeData：提供節點數據，用於建立連線和設置端口事件。\n\n依賴的外部變數/函數\n\n    connecting (Object)：全局變數，記錄當前連線狀態（fromNode, fromOutput, startX, startY, currentX, currentY）。\n    connections (Array)：全局連線數組，存儲連線數據。\n    container (HTMLElement)：主容器元素，用於控制連線狀態類。\n    drawConnections (Function)：繪製連線的函數。\n    setupOutputPort (Function)：為輸出端口設置事件的函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 496,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 38,
+      "x": 1376.6424971945867,
+      "y": -2313.97505090909,
+      "title": "updateNodePosition",
+      "content": "// 修改節點位置更新函數\nfunction updateNodePosition(node) {\nnode.element.style.left = `${node.x}px`;\nnode.element.style.top = `${node.y}px`;\n  node.element.style.transform = 'none'; // 確保節點不受容器縮放影響\n}",
+      "description": "updateNodePosition\n功能\n\n更新節點的 DOM 元素位置，根據節點數據設置 CSS 坐標，並移除縮放變換影響。\n參數\n\n    node (Object)：節點數據對象，包含 DOM 元素（element）和坐標（x, y）。\n\n詳細說明\n\n    設置節點元素的 CSS left 屬性為 node.x（像素）。\n    設置節點元素的 CSS top 屬性為 node.y（像素）。\n    設置節點元素的 CSS transform 屬性為 none，確保節點位置不受父容器縮放（scale）影響。\n\n參數作用\n\n    node：提供節點數據和 DOM 元素，用於更新位置和樣式。\n\n依賴的外部變數\n\n    無直接依賴外部變數，僅操作 node 的屬性。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 189,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 39,
+      "x": 1843.1785007945887,
+      "y": -8024.736358909103,
+      "title": "jumpToSameNameNode",
+      "content": "// 修改 jumpToSameNameNode 函數\nfunction jumpToSameNameNode(node) {\n  const title = node.element.querySelector('.node-title').value;\n  const sameNameNodes = nodes.filter(n =>\n  n.id !== node.id &&\n  n.element.querySelector('.node-title').value === title\n  );\n\n  if (sameNameNodes.length > 0) {\n    // 移除所有現有的高亮\n    document.querySelectorAll('.node').forEach(n => {\n      n.classList.remove('highlight');\n    });\n\n    // 高亮所有同名節點\n    sameNameNodes.forEach(targetNode => {\n      targetNode.element.classList.add('highlight');\n    });\n\n    // 顯示提示信息\n    showJumpHint(node, node.jumpIndex + 1, sameNameNodes.length);\n\n    // 更新跳轉索引\n    node.jumpIndex = (node.jumpIndex + 1) % sameNameNodes.length;\n\n    // 設置定時器移除高亮\n    setTimeout(() => {\n      sameNameNodes.forEach(targetNode => {\n        targetNode.element.classList.remove('highlight');\n      });\n    }, 10000);\n  }\n}",
+      "description": "jumpToSameNameNode\n功能\n\n根據指定節點的標題查找同名節點，設置高亮效果，顯示跳轉提示，並循環更新跳轉索引。\n參數\n\n    node (Object)：節點數據對象，包含節點 ID（id）、DOM 元素（element）和跳轉索引（jumpIndex）。\n\n詳細說明\n\n    獲取當前節點的標題（.node-title 的值）。\n    過濾出同名節點（sameNameNodes），排除自身（n.id !== node.id）且標題相同。\n    若存在同名節點：\n        移除所有節點的現有高亮（.highlight）。\n        為所有同名節點添加高亮類（.highlight）。\n        調用 showJumpHint，傳遞當前節點、跳轉次數（node.jumpIndex + 1）和同名節點總數。\n        更新跳轉索引（node.jumpIndex），使用模運算實現循環（(node.jumpIndex + 1) % sameNameNodes.length）。\n        設置 10 秒定時器，自動移除同名節點的高亮效果。\n\n參數作用\n\n    node：提供節點數據，用於獲取標題、更新索引和處理高亮邏輯。\n\n依賴的外部變數/函數\n\n    nodes (Array)：全局節點數組，用於查找同名節點。\n    showJumpHint (Function)：顯示跳轉提示的函數。\n    document.querySelectorAll：DOM API，用於移除高亮。",
+      "isConvertedToButton": true,
+      "items": [
+        "showJumpHint"
+      ],
+      "metadata": {
+        "contentLength": 863,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 40,
+      "x": 1845.5025007945874,
+      "y": -7751.475358909104,
+      "title": "toWorldX",
+      "content": "// 視圖轉換函數\nfunction toWorldX(x) {\n  return (x - translateX) / scale;\n}",
+      "description": "toWorldX\n功能\n\n將屏幕坐標的 x 值轉換為世界坐標，考慮畫布的平移和縮放。\n參數\n\n    x (Number)：屏幕坐標的 x 值。\n\n詳細說明\n\n    使用公式 (x - translateX) / scale 計算世界坐標：\n        減去水平平移量（translateX）以抵消畫布偏移。\n        除以縮放比例（scale）以調整縮放影響。\n    返回計算後的世界坐標 x 值。\n\n參數作用\n\n    x：提供需要轉換的屏幕坐標 x 值。\n\n依賴的外部變數\n\n    translateX (Number)：全局水平平移量。\n    scale (Number)：全局縮放比例。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 69,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 41,
+      "x": 1846.6025007945877,
+      "y": -7516.475358909102,
+      "title": "toWorldY",
+      "content": "function toWorldY(y) {\n  return (y - translateY) / scale;\n}",
+      "description": "toWorldY\n功能\n\n將屏幕坐標的 y 值轉換為世界坐標，考慮畫布的平移和縮放。\n參數\n\n    y (Number)：屏幕坐標的 y 值。\n\n詳細說明\n\n    使用公式 (y - translateY) / scale 計算世界坐標：\n        減去垂直平移量（translateY）以抵消畫布偏移。\n        除以縮放比例（scale）以調整縮放影響。\n    返回計算後的世界坐標 y 值。\n\n參數作用\n\n    y：提供需要轉換的屏幕坐標 y 值。\n\n依賴的外部變數\n\n    translateY (Number)：全局垂直平移量。\n    scale (Number)：全局縮放比例。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 59,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 42,
+      "x": 1792.485500794589,
+      "y": -7288.7053589090965,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 43,
+      "x": 1791.385500794589,
+      "y": -7088.505358909103,
+      "title": "updateSameNameHighlights",
+      "content": "// 新增函數：更新所有同名節點的高亮狀態\nfunction updateSameNameHighlights() {\n  // 先移除所有高亮\n  document.querySelectorAll('.node').forEach(node => {\n    node.classList.remove('highlight-same-name');\n  });\n\n  // 建立節點名稱映射\nconst nameMap = {};\n  nodes.forEach(node => {\n    const title = node.element.querySelector('.node-title').value;\n    if (!nameMap[title]) {\n      nameMap[title] = [];\n    }\n    nameMap[title].push(node);\n  });\n\n  // 為有相同名稱的節點添加高亮\n  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {\n    if (sameNameNodes.length > 1) {\n      sameNameNodes.forEach(node => {\n        node.element.classList.add('highlight-same-name');\n      });\n    }\n  });\n}",
+      "description": "updateSameNameHighlights\n功能\n\n更新節點的高亮狀態，移除所有現有同名高亮，並為具有相同標題的節點（兩個或以上）添加高亮類。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    document.querySelectorAll：DOM API，用於選擇所有 .node 元素。\n\n詳細說明\n\n    移除現有高亮：\n        使用 document.querySelectorAll('.node') 選擇所有節點元素。\n        遍歷並移除每個節點的 highlight-same-name 類。\n    建立名稱映射：\n        創建 nameMap 對象，用於將節點標題映射到節點數組。\n        遍歷 nodes，獲取每個節點的標題（.node-title 的值）。\n        將節點按標題分組，存儲在 nameMap[title] 數組中。\n    添加高亮：\n        遍歷 nameMap 的鍵值對（[title, sameNameNodes]）。\n        若某標題對應的節點數（sameNameNodes.length）大於 1，則為該標題的所有節點添加 highlight-same-name 類。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 訪問節點數據和 DOM 元素。\n\n依賴的外部變數\n\n    nodes：提供節點數據，包含 element 和標題信息。\n    document.querySelectorAll：DOM API，用於選擇節點元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 649,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 44,
+      "x": 1795.251410794589,
+      "y": -6861.251758909098,
+      "title": "findNodeByElement",
+      "content": "// 辅助函数：通过元素查找节点\n  function findNodeByElement(element) {\n    return nodes.find(node => node.element === element);\n  }",
+      "description": "findNodeByElement\n功能\n\n根據給定的 DOM 元素查找對應的節點數據對象。\n參數\n\n    element (HTMLElement)：需要查找的節點 DOM 元素。\n\n詳細說明\n\n    使用 nodes.find 遍歷全局 nodes 數組，查找 node.element 等於給定 element 的節點。\n    返回匹配的節點數據對象，若無匹配則返回 undefined。\n\n參數作用\n\n    element：提供 DOM 元素，用於在 nodes 數組中查找對應節點。\n\n依賴的外部變數\n\n    nodes：全局節點數組，包含節點數據和 DOM 元素引用。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 117,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 45,
+      "x": 1793.0514107945892,
+      "y": -6644.551758909097,
+      "title": "updateNodeList",
+      "content": "// 更新節點列表 - 優化版本\nfunction updateNodeList() {\n  const nodeList = document.getElementById('node-list');\n  if (!nodeList) return;\n  \n  requestAnimationFrame(() => {\n    const visibleNodes = getVisibleNodes();\n    const visibleNodeIds = visibleNodes.map(n => n.id).join(',');\n    const lastVisibleNodeIds = (lastVisibleNodes || []).map(n => n.id).join(',');\n    \n    if (visibleNodeIds === lastVisibleNodeIds) return;\n    \n    saveCurrentDescriptions();\n    \n    // 建立節點名稱到描述的映射\n    const nameToDescriptionMap = {};\n    nodes.forEach(node => {\n      const title = node.element.querySelector('.node-title')?.value || '未命名節點';\n      if (nodeDescriptions[node.id] && nodeDescriptions[node.id].trim() !== '') {\n        // 如果這個節點有描述，記錄到映射中\n        nameToDescriptionMap[title] = nodeDescriptions[node.id];\n      }\n    });\n    \n    const fragment = document.createDocumentFragment();\n    \n    visibleNodes.forEach(node => {\n      const nodeElement = document.createElement('div');\n      nodeElement.className = 'node-list-item';\n      \n      const title = node.element.querySelector('.node-title')?.value || '未命名節點';\n      \n      // 檢查是否有相同名稱的節點已經有描述\n      let description = nodeDescriptions[node.id] || '';\n      if (!description.trim() && nameToDescriptionMap[title]) {\n        // 如果當前節點沒有描述，但相同名稱的節點有描述，則使用該描述\n        description = nameToDescriptionMap[title];\n        nodeDescriptions[node.id] = description; // 更新節點描述資料\n      }\n      \n      nodeElement.innerHTML = `\n        <div class=\"node-list-name\">${escapeHtml(title)}</div>\n        <textarea class=\"node-list-description\" data-node-id=\"${node.id}\" \n          placeholder=\"輸入節點描述...\">${escapeHtml(description)}</textarea>\n      `;\n      \n      const descInput = nodeElement.querySelector('.node-list-description');\n      descInput.addEventListener('input', () => {\n        const newDescription = descInput.value;\n        nodeDescriptions[descInput.dataset.nodeId] = newDescription;\n        \n        // 當描述變更時，更新所有同名節點的描述\n        if (newDescription.trim() !== '') {\n          const currentTitle = node.element.querySelector('.node-title')?.value || '未命名節點';\n          nodes.forEach(n => {\n            const nTitle = n.element.querySelector('.node-title')?.value || '未命名節點';\n            if (nTitle === currentTitle && n.id !== node.id) {\n              nodeDescriptions[n.id] = newDescription;\n            }\n          });\n           syncDescriptionsForSameNameNodes(descInput.dataset.nodeId);\n          // 觸發重新渲染節點列表\n          updateNodeList();\n        }\n      });\n      \n      fragment.appendChild(nodeElement);\n    });\n    \n    nodeList.innerHTML = '';\n    nodeList.appendChild(fragment);\n    lastVisibleNodes = visibleNodes;\n  });\n}",
+      "description": "updateNodeList\n功能\n\n更新節點列表的顯示，僅渲染可見節點，同步節點描述，並支援同名節點的描述共享，使用 requestAnimationFrame 優化性能。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodeList (HTMLElement)：節點列表的 DOM 元素（ID 為 node-list）。\n    nodes (Array)：節點數組，包含節點數據和 DOM 元素。\n    nodeDescriptions (Object)：節點描述對象，以節點 ID 為鍵。\n    lastVisibleNodes (Array)：上次渲染的可見節點數組，用於比較避免重複渲染。\n    getVisibleNodes (Function)：獲取當前可見節點的函數。\n    saveCurrentDescriptions (Function)：保存當前描述的函數。\n    syncDescriptionsForSameNameNodes (Function)：同步同名節點描述的函數。\n    escapeHtml (Function)：HTML 轉義函數。\n\n詳細說明\n\n    檢查節點列表：\n        若 nodeList 不存在，直接返回。\n    使用 requestAnimationFrame：\n        將渲染操作封裝在 requestAnimationFrame 中，確保 DOM 更新與瀏覽器渲染同步，優化性能。\n    比較可見節點：\n        調用 getVisibleNodes 獲取當前可見節點（visibleNodes）。\n        將可見節點的 ID 拼接為字符串（visibleNodeIds），與上次可見節點的 ID 字符串（lastVisibleNodeIds）比較。\n        若兩者相同，則無需更新，直接返回。\n    保存描述：\n        調用 saveCurrentDescriptions 保存當前節點描述。\n    建立名稱到描述的映射：\n        創建 nameToDescriptionMap，遍歷 nodes，若節點有非空描述（nodeDescriptions[node.id]），則以節點標題（.node-title 值，默認“未命名節點”）為鍵記錄描述。\n    生成節點列表：\n        使用 DocumentFragment 減少 DOM 操作次數。\n        遍歷 visibleNodes，為每個節點創建 div.node-list-item 元素，包含：\n            標題（div.node-list-name）：顯示節點標題，經 escapeHtml 轉義。\n            描述輸入框（textarea.node-list-description）：顯示節點描述（從 nodeDescriptions[node.id] 或 nameToDescriptionMap[title] 獲取），設置 data-node-id 屬性。\n        若節點無描述但同名節點有描述，則使用共享描述並更新 nodeDescriptions。\n    設置描述輸入事件：\n        為每個描述輸入框添加 input 事件監聽器：\n            更新 nodeDescriptions[descInput.dataset.nodeId] 為新描述。\n            若新描述非空，遍歷 nodes，將同名節點（標題相同但 ID 不同）的描述同步為新描述。\n            調用 syncDescriptionsForSameNameNodes 進一步同步描述。\n            調用 updateNodeList 觸發重新渲染。\n    更新 DOM：\n        清空 nodeList 內容，將 fragment 添加到 nodeList。\n        更新 lastVisibleNodes 為當前可見節點。\n\n參數作用\n\n    無直接參數，函數通過全局變數訪問節點數據和 DOM 元素，動態更新節點列表。\n\n依賴的外部變數/函數\n\n    nodeList：節點列表容器。\n    nodes, nodeDescriptions, lastVisibleNodes：節點和描述數據。\n    getVisibleNodes, saveCurrentDescriptions, syncDescriptionsForSameNameNodes, escapeHtml：輔助函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "getVisibleNodes",
+        "saveCurrentDescriptions",
+        "escapeHtml",
+        "syncDescriptionsForSameNameNodes"
+      ],
+      "metadata": {
+        "contentLength": 2681,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 46,
+      "x": 1797.4514107945893,
+      "y": -6324.451758909095,
+      "title": "updateSameNameHighlights",
+      "content": "// 新增函數：更新所有同名節點的高亮狀態\nfunction updateSameNameHighlights() {\n  // 先移除所有高亮\n  document.querySelectorAll('.node').forEach(node => {\n    node.classList.remove('highlight-same-name');\n  });\n\n  // 建立節點名稱映射\nconst nameMap = {};\n  nodes.forEach(node => {\n    const title = node.element.querySelector('.node-title').value;\n    if (!nameMap[title]) {\n      nameMap[title] = [];\n    }\n    nameMap[title].push(node);\n  });\n\n  // 為有相同名稱的節點添加高亮\n  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {\n    if (sameNameNodes.length > 1) {\n      sameNameNodes.forEach(node => {\n        node.element.classList.add('highlight-same-name');\n      });\n    }\n  });\n}",
+      "description": "updateSameNameHighlights\n功能\n\n更新節點的高亮狀態，移除所有現有同名高亮，並為具有相同標題的節點（兩個或以上）添加高亮類。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    document.querySelectorAll：DOM API，用於選擇所有 .node 元素。\n\n詳細說明\n\n    移除現有高亮：\n        使用 document.querySelectorAll('.node') 選擇所有節點元素。\n        遍歷並移除每個節點的 highlight-same-name 類。\n    建立名稱映射：\n        創建 nameMap 對象，用於將節點標題映射到節點數組。\n        遍歷 nodes，獲取每個節點的標題（.node-title 的值）。\n        將節點按標題分組，存儲在 nameMap[title] 數組中。\n    添加高亮：\n        遍歷 nameMap 的鍵值對（[title, sameNameNodes]）。\n        若某標題對應的節點數（sameNameNodes.length）大於 1，則為該標題的所有節點添加 highlight-same-name 類。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 訪問節點數據和 DOM 元素。\n\n依賴的外部變數\n\n    nodes：提供節點數據，包含 element 和標題信息。\n    document.querySelectorAll：DOM API，用於選擇節點元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 649,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 47,
+      "x": 1799.4754107945882,
+      "y": -6131.599758909099,
+      "title": "updateJumpButton",
+      "content": "// 修改 updateJumpButton 函數\nfunction updateJumpButton(node) {\n  const title = node.element.querySelector('.node-title').value;\n  const jumpBtn = node.element.querySelector('.jump-to-btn');\n\n  // 查找所有同名節點\n  const sameNameNodes = nodes.filter(n =>\n  n.id !== node.id &&\n  n.element.querySelector('.node-title').value === title\n  );\n\n  if (sameNameNodes.length > 0) {\n    jumpBtn.classList.remove('hidden');\n    jumpBtn.setAttribute('data-count', sameNameNodes.length);\n  jumpBtn.title = `顯示同名節點 (共 ${sameNameNodes.length} 個)`;\n  } else {\n    jumpBtn.classList.add('hidden');\n    jumpBtn.removeAttribute('data-count');\n  }\n}",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 619,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 48,
+      "x": 1795.3247107945886,
+      "y": -5934.431858909101,
+      "title": "handleParagraphInput",
+      "content": "// 处理段落输入\nfunction handleParagraphInput(inputElement, node, nodeData) {\n  visibleNodes = getVisibleNodes(); // Get the current visible nodes\n  \n  if (visibleNodes.length === 0) {\n    nodeList.innerHTML = '<div class=\"no-nodes-message\">目前沒有可見節點</div>';\n    return;\n  }\n  \n  const content = inputElement.value.trim();\n  if (content === '') return;\n\n  const functionName = extractFunctionName(content);\n  if (functionName) {\n    node.querySelector('.node-title').value = functionName;\n  }\n\n  const calledFunctions = extractCalledFunctions(content, functionName);\n  if (calledFunctions.length > 0) {\n    createFunctionItems(nodeData, calledFunctions, container);\n  }\n\n  setupParagraphPopup(inputElement, content, nodeData);\n}",
+      "description": "handleParagraphInput\n功能\n\n處理段落輸入框的輸入事件，更新節點標題，根據輸入內容生成項目列表，並設置段落彈出框。\n參數\n\n    inputElement (HTMLElement)：段落輸入框元素（textarea.paragraph-input），提供用戶輸入內容。\n    node (HTMLElement)：節點的 DOM 元素，包含標題和其他子元素。\n    nodeData (Object)：節點數據對象，包含節點 ID、DOM 元素（element）、輸出端口索引（outputs）等信息。\n\n詳細說明\n\n    獲取可見節點：\n        調用 getVisibleNodes 更新全局 visibleNodes，獲取當前視口內的可見節點。\n        若 visibleNodes 為空，將節點列表（nodeList）設置為顯示“目前沒有可見節點”的消息，並終止函數執行。\n    處理輸入內容：\n        獲取輸入框的值並去除首尾空格（content = inputElement.value.trim()）。\n        若內容為空（content === ''），終止函數執行。\n    提取函數名稱：\n        使用 extractFunctionName 從 content 中提取函數名稱（functionName）。\n        若提取到函數名稱，將節點的標題輸入框（.node-title）值設置為該名稱。\n    提取被調用函數：\n        使用 extractCalledFunctions 提取內容中的被調用函數名稱（calledFunctions），排除提取的函數名稱（functionName）。\n        若存在被調用函數（calledFunctions.length > 0），調用 createFunctionItems，傳遞節點數據（nodeData）、函數名稱列表（calledFunctions）和容器（container），生成對應的項目列表。\n    設置段落彈出框：\n        調用 setupParagraphPopup，傳遞輸入框（inputElement）、內容（content）和節點數據（nodeData），將輸入框替換為按鈕和彈出框。\n\n參數作用\n\n    inputElement：提供用戶輸入內容，用於提取函數信息和設置彈出框。\n    node：提供節點 DOM 元素，用於更新標題。\n    nodeData：提供節點數據，用於生成項目和設置彈出框。\n\n依賴的外部變數/函數\n\n    visibleNodes (Array)：全局變數，儲存當前可見節點。\n    nodeList (HTMLElement)：節點列表元素，用於顯示無節點消息。\n    getVisibleNodes (Function)：獲取可見節點的函數。\n    extractFunctionName (Function)：提取函數名稱的函數。\n    extractCalledFunctions (Function)：提取被調用函數名稱的函數。\n    createFunctionItems (Function)：生成項目列表的函數。\n    setupParagraphPopup (Function)：設置段落彈出框的函數。\n    container (HTMLElement)：全局主容器元素，用於設置項目事件。",
+      "isConvertedToButton": true,
+      "items": [
+        "getVisibleNodes",
+        "extractFunctionName",
+        "extractCalledFunctions",
+        "createFunctionItems",
+        "setupParagraphPopup"
+      ],
+      "metadata": {
+        "contentLength": 721,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 49,
+      "x": 1767.1454971945886,
+      "y": -4445.919050909101,
+      "title": "handleAddNodeClick",
+      "content": "// 处理添加节点点击\nfunction handleAddNodeClick(nodeData, outputIndex, e) {\n  const childNodes = connections.filter(conn =>\n  conn.fromNode === nodeData.id &&\n  conn.fromOutput === outputIndex\n  ).length;\n\n  const newNodeX = nodeData.x + 200 / scale;\n  const newNodeY = nodeData.y + (childNodes * 120 / scale);\n\n  const newNode = createNode(newNodeX, newNodeY);\n\n  connections.push( {\n    fromNode: nodeData.id,\n    fromOutput: outputIndex,\n    toNode: newNode.id\n  });\n  drawConnections();\n  e.stopPropagation();\n}",
+      "description": "handleAddNodeClick\n功能\n\n處理添加節點按鈕的點擊事件，創建新節點並與當前節點建立連線，根據現有子節點數量計算新節點位置。\n參數\n\n    nodeData (Object)：當前節點的數據對象，包含節點 ID（id）、坐標（x, y）等信息。\n    outputIndex (Number)：用於連線的輸出端口索引。\n    e (Event)：點擊事件對象，用於阻止事件冒泡。\n\n詳細說明\n\n    計算與當前節點和指定輸出端口相關的子節點數量（childNodes），通過過濾 connections 數組實現。\n    計算新節點的位置：\n        水平坐標（newNodeX）：當前節點 x 坐標加 200 像素（考慮縮放比例 scale）。\n        垂直坐標（newNodeY）：當前節點 y 坐標加上子節點數量乘以 120 像素（考慮縮放比例）。\n    調用 createNode 創建新節點，傳遞計算出的坐標（newNodeX, newNodeY），未指定標題（使用 createNode 默認標題“節點”）。\n    創建新連線對象，包含起始節點（fromNode: nodeData.id）、輸出端口（fromOutput: outputIndex）和目標節點（toNode: newNode.id），並添加到 connections 數組。\n    調用 drawConnections 刷新連線畫面。\n    使用 e.stopPropagation 阻止事件冒泡。\n\n參數作用\n\n    nodeData：提供當前節點數據，用於計算位置和建立連線。\n    outputIndex：指定連線的輸出端口索引。\n    e：提供事件對象，用於控制事件傳播。\n\n依賴的外部變數/函數\n\n    connections (Array)：全局連線數組，存儲連線數據。\n    scale (Number)：全局縮放比例。\n    createNode (Function)：創建新節點的函數。\n    drawConnections (Function)：繪製連線的函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 507,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 50,
+      "x": 1770.995497194589,
+      "y": -3968.0290509090964,
+      "title": "addNewItem",
+      "content": "// 添加新项目\nfunction addNewItem(node, nodeData) {\n  const items = node.querySelector('.items');\n  const itemCount = items.children.length;\n  const newItem = document.createElement('div');\n  newItem.className = 'item';\n  newItem.innerHTML = `\n    <input type=\"text\" class=\"item-text\" value=\"項目 ${itemCount + 1}\">\n    <button class=\"add-node-btn\">+</button>\n    <div class=\"output-port\" data-type=\"output\"></div>\n  `;\n  items.appendChild(newItem);\n\n  // 使用當前長度作為新的輸出索引\n  const outputIndex = nodeData.outputs.length;\n  nodeData.outputs.push(outputIndex);\n\n  setupItemEvents(newItem, nodeData, outputIndex);\n}",
+      "description": "addNewItem\n功能\n\n為節點添加新項目元素，更新節點的輸出端口索引，並為新項目設置事件監聽器。\n參數\n\n    node (HTMLElement)：節點的 DOM 元素，包含項目容器（.items）。\n    nodeData (Object)：節點數據對象，包含輸出端口索引數組（outputs）等信息。\n\n詳細說明\n\n    查找節點中的項目容器（div.items）。\n    計算當前項目數量（itemCount），基於容器子元素數量。\n    創建新項目元素（div.item），設置其 HTML 內容，包含：\n        文本輸入框（input.item-text），初始值為“項目 X”（X 為 itemCount + 1）。\n        添加節點按鈕（button.add-node-btn）。\n        輸出端口（div.output-port），設置 data-type=\"output\"。\n    將新項目添加到項目容器。\n    獲取當前輸出索引（outputIndex），為 nodeData.outputs 的長度。\n    將新索引添加到 nodeData.outputs 數組。\n    調用 setupItemEvents，為新項目設置事件監聽器，傳遞項目元素（newItem）、節點數據（nodeData）和輸出索引（outputIndex）。\n\n參數作用\n\n    node：提供節點元素，用於查找項目容器和添加新項目。\n    nodeData：提供節點數據，用於更新輸出索引和設置事件。\n\n依賴的外部變數/函數\n\n    setupItemEvents (Function)：為項目元素設置事件的函數（未提供實現）。",
+      "isConvertedToButton": true,
+      "items": [
+        "setupItemEvents"
+      ],
+      "metadata": {
+        "contentLength": 602,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 51,
+      "x": 1758.7954971945883,
+      "y": -3729.7790509090955,
+      "title": "createNode",
+      "content": "// 主函數\nfunction createNode(x, y, title = '節點') {\n  const node = createNodeElement(x, y, title);\n  const nodeData = initializeNodeData(node, x, y);\n\n  setupNodeDrag(node, nodeData);\n  setupDeleteButton(node, nodeData);\n  setupTitleInput(node);\n  setupParagraphInput(node, nodeData);\n  setupInitialAddButton(node, nodeData);\n  setupAddItemButton(node, nodeData);\n  setupGenerateButton(node, nodeData); // 添加這行\n  setupPortEvents(node, nodeData);\n\n  updateNodePosition(nodeData);\n  return nodeData;\n}",
+      "description": "createNode\n功能\n\n創建新節點，包括 DOM 元素和數據對象，並設置其拖動、刪除、標題輸入、段落輸入、項目添加和端口事件等交互行為。\n參數\n\n    x (Number)：節點的水平坐標（像素）。\n    y (Number)：節點的垂直坐標（像素）。\n    title (String, 可選)：節點的標題，默認為“節點”。\n\n詳細說明\n\n    調用 createNodeElement 創建節點的 DOM 元素，設置位置和標題。\n    調用 initializeNodeData 初始化節點數據對象，包含 ID、坐標等。\n    設置節點的交互行為：\n        setupNodeDrag：設置節點拖動事件。\n        setupDeleteButton：設置刪除按鈕事件。\n        setupTitleInput：設置標題輸入框事件。\n        setupParagraphInput：設置段落輸入框事件。\n        setupInitialAddButton：設置初始添加按鈕事件（未提供實現）。\n        setupAddItemButton：設置新增項目按鈕事件。\n        setupGenerateButton：設置生成按鈕事件（未提供實現）。\n        setupPortEvents：設置輸入/輸出端口事件。\n    調用 updateNodePosition 更新節點位置（未提供實現）。\n    返回節點數據對象（nodeData）。\n\n參數作用\n\n    x, y：指定節點的初始位置，傳遞給 createNodeElement 和 initializeNodeData。\n    title：設置節點的初始標題，若未提供則使用默認值“節點”。\n\n依賴的外部函數\n\n    createNodeElement, initializeNodeData, setupNodeDrag, setupDeleteButton, setupTitleInput, setupParagraphInput, setupInitialAddButton, setupAddItemButton, setupGenerateButton, setupPortEvents, updateNodePosition。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNodeElement",
+        "initializeNodeData",
+        "setupNodeDrag",
+        "setupDeleteButton",
+        "setupTitleInput",
+        "setupParagraphInput",
+        "setupInitialAddButton",
+        "setupAddItemButton",
+        "setupGenerateButton",
+        "setupPortEvents",
+        "updateNodePosition"
+      ],
+      "metadata": {
+        "contentLength": 496,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 52,
+      "x": 1749.774497194588,
+      "y": -3106.473050909094,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 53,
+      "x": 1741.9224971945882,
+      "y": -2910.3150509090938,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 54,
+      "x": 1743.8224971945883,
+      "y": -2725.415050909093,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 55,
+      "x": 2169.17850079459,
+      "y": -8041.736358909103,
+      "title": "showJumpHint 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 56,
+      "x": 2258.2247107945914,
+      "y": -6254.531858909103,
+      "title": "getVisibleNodes",
+      "content": "// 獲取當前可見的節點（修正座標版本）\nfunction getVisibleNodes() {\n  // 1. 獲取視口可見區域（不考慮左側面板，使用整個視窗）\n  const viewport = {\n    left: 0,\n    right: window.innerWidth,\n    top: 0,\n    bottom: window.innerHeight\n  };\n\n  return nodes.filter(node => {\n    // 2. 直接使用getBoundingClientRect獲取屏幕座標\n    const rect = node.element.getBoundingClientRect();\n    \n    // 3. 檢查節點是否在視口內（完全精確判斷）\n    const isVisible = (\n      rect.right > viewport.left &&\n      rect.left < viewport.right &&\n      rect.bottom > viewport.top &&\n      rect.top < viewport.bottom\n    );\n\n    // 4. 控制名稱顯示（直接基於屏幕座標判斷）\n    const nameElement = node.element.querySelector('.node-name');\n    if (nameElement) {\n      nameElement.style.display = isVisible ? 'block' : 'none';\n    }\n\n    // 5. 返回節點是否在緩衝區內（用於渲染優化）\n    const buffer = -200; // 屏幕像素緩衝\n    const inBufferArea = (\n      rect.right > (viewport.left - buffer) &&\n      rect.left < (viewport.right + buffer) &&\n      rect.bottom > (viewport.top - buffer) &&\n      rect.top < (viewport.bottom + buffer)\n    );\n\n    return inBufferArea;\n  });\n}",
+      "description": "getVisibleNodes\n功能\n\n獲取當前視口內及緩衝區範圍內的可見節點，根據節點的屏幕坐標判斷可見性，並動態控制節點名稱的顯示狀態。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    window.innerWidth, window.innerHeight (Number)：瀏覽器視窗的寬度和高度，用於定義視口範圍。\n\n詳細說明\n\n    定義視口範圍：\n        創建 viewport 對象，表示視窗的邊界：\n            left: 0, right: window.innerWidth：水平範圍覆蓋整個視窗。\n            top: 0, bottom: window.innerHeight：垂直範圍覆蓋整個視窗。\n        註釋提到“不考慮左側面板”，確保視口基於整個視窗而非特定容器。\n    過濾節點：\n        使用 nodes.filter 遍歷全局節點數組，對每個節點執行以下操作。\n    計算屏幕坐標：\n        使用 node.element.getBoundingClientRect() 獲取節點的屏幕坐標（rect），包括 left, right, top, bottom。\n    判斷可見性：\n        檢查節點是否在視口內（isVisible），條件為：\n            rect.right > viewport.left：節點右邊界在視口左邊界右側。\n            rect.left < viewport.right：節點左邊界在視口右邊界左側。\n            rect.bottom > viewport.top：節點底邊界在視口頂邊界下側。\n            rect.top < viewport.bottom：節點頂邊界在視口底邊界上側。\n        這確保節點至少部分在視口內。\n    控制名稱顯示：\n        查找節點的 .node-name 元素（名稱顯示元素）。\n        若存在，根據 isVisible 設置其 display 樣式為 block（可見）或 none（隱藏）。\n    緩衝區判斷：\n        定義緩衝區（buffer: -200），將視口範圍擴展 200 像素（負值表示向外擴展）。\n        檢查節點是否在擴展後的緩衝區內（inBufferArea），條件類似可見性判斷，但使用 viewport.left - buffer 等擴展邊界。\n        返回 inBufferArea，確保返回的節點包括視口外但接近視口的節點（用於渲染優化）。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 和視窗尺寸動態計算可見節點。\n\n依賴的外部變數\n\n    nodes：提供節點數據，必須包含有效的 element 屬性。\n    window.innerWidth, window.innerHeight：提供視窗尺寸。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1038,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 57,
+      "x": 2257.124710794591,
+      "y": -6019.531858909103,
+      "title": "extractFunctionName",
+      "content": "// 提取到外部的工具函數\nfunction extractFunctionName(content) {\n  const functionNameMatch = content.match(/function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/);\n  return functionNameMatch ? functionNameMatch[1] : null;\n}",
+      "description": "extractFunctionName\n功能\n\n從給定的程式碼內容中提取函數名稱。\n參數\n\n    content (String)：包含程式碼的字符串，通常為函數定義的內容。\n\n詳細說明\n\n    使用正則表達式 /function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/ 匹配函數名稱：\n        function\\s+：匹配關鍵字 function 後跟隨一個或多個空格。\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，要求以字母、底線或美元符號開頭，後跟隨零個或多個字母、數字、底線或美元符號。\n    若匹配成功，返回捕獲的函數名稱（functionNameMatch[1]）；否則返回 null。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數名稱。\n\n依賴的外部變數\n\n    無直接依賴外部變數，僅使用內部正則表達式。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 197,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 58,
+      "x": 2259.324710794591,
+      "y": -5793.3318589091,
+      "title": "extractCalledFunctions",
+      "content": "function extractCalledFunctions(content, functionNameToExclude) {\n  const functionCallRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g;\n  const functionNames = new Set();\n  let match;\n\n  while ((match = functionCallRegex.exec(content)) !== null) {\n    const calledFunctionName = match[1];\n    // 檢查是否在黑名單中或是要排除的函數名\n    if (!FUNCTION_BLACKLIST.includes(calledFunctionName) &&\n    calledFunctionName !== functionNameToExclude) {\n      functionNames.add(calledFunctionName);\n    }\n  }\n\n  return Array.from(functionNames);\n}",
+      "description": "extractCalledFunctions\n功能\n\n從給定的程式碼內容中提取被調用的函數名稱，排除指定的函數名稱和黑名單中的函數。\n參數\n\n    content (String)：包含程式碼的字符串，用於查找函數調用。\n    functionNameToExclude (String)：需要排除的函數名稱（如自身函數名稱）。\n\n詳細說明\n\n    使用正則表達式 /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g 匹配函數調用：\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，以字母、底線或美元符號開頭。\n        \\s*\\([^)]*\\)：匹配函數調用的小括號及其參數，允許空格。\n        /g：全局匹配，查找所有符合條件的調用。\n    創建 Set 對象（functionNames）儲存唯一的函數名稱。\n    遍歷所有匹配項，提取調用函數名稱（calledFunctionName）。\n    檢查函數名稱是否不在黑名單（FUNCTION_BLACKLIST）中且不等於要排除的名稱（functionNameToExclude），若滿足條件則添加到 functionNames。\n    將 functionNames 轉換為數組並返回。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數調用。\n    functionNameToExclude：指定要排除的函數名稱，防止自引用或無關函數被包含。\n\n依賴的外部變數\n\n    FUNCTION_BLACKLIST (Array)：全局黑名單數組，包含不應提取的函數名稱。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 521,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 59,
+      "x": 2262.624710794591,
+      "y": -5594.6318589091,
+      "title": "createFunctionItems",
+      "content": "function createFunctionItems(nodeData, functionNames, container) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = '';\n\n  functionNames.forEach((name, index) => {\n    const newItem = document.createElement('div');\n    newItem.className = 'item';\n    newItem.innerHTML = `\n  <input type=\"text\" class=\"item-text\" value=\"${name}\">\n    <button class=\"add-node-btn\">+</button>\n    <div class=\"output-port\" data-type=\"output\"></div>\n    `;\n    itemsContainer.appendChild(newItem);\n\n    nodeData.outputs = functionNames.map((_, i) => i);\n    setupAddNodeButton(newItem, nodeData, index, container);\n    setupOutputPort(newItem, nodeData, index, container);\n  });\n}",
+      "description": "createFunctionItems\n功能\n\n根據給定的函數名稱列表，為節點創建項目元素，更新節點的輸出端口並設置相關事件。\n參數\n\n    nodeData (Object)：節點數據對象，包含節點 DOM 元素（element）、輸出端口索引（outputs）等信息。\n    functionNames (Array)：函數名稱列表，用於創建項目。\n    container (HTMLElement)：主容器元素，用於設置事件。\n\n詳細說明\n\n    查找節點中的項目容器（div.items），並清空其內容（innerHTML = ''）。\n    遍歷 functionNames，為每個函數名稱創建項目元素（div.item），設置其 HTML 內容，包含：\n        文本輸入框（input.item-text），值為函數名稱（name）。\n        添加節點按鈕（button.add-node-btn）。\n        輸出端口（div.output-port），設置 data-type=\"output\"。\n    將新項目添加到項目容器。\n    更新節點的輸出端口索引（nodeData.outputs），生成從 0 到 functionNames.length - 1 的索引數組。\n    為每個項目調用 setupAddNodeButton 和 setupOutputPort，設置添加節點和輸出端口事件，傳遞項目元素（newItem）、節點數據（nodeData）、索引（index）和容器（container）。\n\n參數作用\n\n    nodeData：提供節點數據，用於更新項目容器和輸出索引。\n    functionNames：提供函數名稱列表，用於生成項目。\n    container：提供主容器，用於事件設置。\n\n依賴的外部變數/函數\n\n    setupAddNodeButton (Function)：為添加節點按鈕設置事件的函數。\n    setupOutputPort (Function)：為輸出端口設置事件的函數。",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 705,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 60,
+      "x": 2253.0547107945904,
+      "y": -5116.531858909101,
+      "title": "setupParagraphPopup",
+      "content": "function setupParagraphPopup(paragraphInput, content, nodeData) {\n  const btn = document.createElement('button');\n  btn.className = 'paragraph-btn';\n  btn.textContent = content.length > 50 ? content.substring(0, 47) + '...' : content;\n\n  const popup = document.createElement('div');\n  popup.className = 'paragraph-popup';\n  popup.textContent = content;\n\n  const container = document.createElement('div');\n  container.style.position = 'relative';\n  container.style.display = 'inline-block';\n  container.style.width = '100%';\n\n  container.appendChild(btn);\n  container.appendChild(popup);\n\n  paragraphInput.replaceWith(container);\n  // 新增：用於存儲彈出框容器引用\n  let popupContainer = null;\n\n  btn.addEventListener('click', (e) => {\n    if (popupContainer && document.body.contains(popupContainer)) {\n      popupContainer.remove();\n    }\n\n    const btnRect = btn.getBoundingClientRect();\n    const btnCenterX = btnRect.left + btnRect.width / 2;\n    const btnCenterY = btnRect.top + btnRect.height / 2;\n\n    const worldX = (btnCenterX - translateX) / scale;\n    const worldY = (btnCenterY - translateY) / scale;\n\n    const popupWidth = 600;\n    const popupHeight = 200;\n\n    popupContainer = document.createElement('div');\n    popupContainer.style.position = 'fixed';\n    popupContainer.style.left = '0';\n    popupContainer.style.top = '0';\n  popupContainer.style.width = `${popupWidth}px`;\n  popupContainer.style.height = `${popupHeight}px`;\n    popupContainer.style.transform = `\n  translate(${worldX * scale + translateX - popupWidth/2}px,\n  ${worldY * scale + translateY - popupHeight/2}px)\n    `;\n    popupContainer.style.zIndex = '10000';\n    popup.style.zIndex = '10000';\n\n    popup.style.display = 'block';\n    popup.style.position = 'absolute';\n    popup.style.width = '100%';\n    popup.style.height = '100%';\n    popup.style.overflow = 'auto';\n    popupContainer.appendChild(popup);\n\n    document.body.appendChild(popupContainer);\n\n    // 設置為當前活動彈出框\n    activePopup = popup;\n    popupScrollPosition = 0;\n    updatePopupScroll();\n\n    e.stopPropagation();\n  });\n\n  // 保留原有的鍵盤事件監聽\n  const clearContentHandler = function(e) {\n    if (e.key.toLowerCase() === 'x' && activePopup === popup) {\n      paragraphInput.value = '';\n      resetItemsList(nodeData);\n      container.replaceWith(paragraphInput);\n      document.removeEventListener('keydown', clearContentHandler);\n      if (popupContainer) {\n        popupContainer.remove();\n        popupContainer = null;\n      }\n      activePopup = null;\n      e.preventDefault();\n    }\n  };\n  document.addEventListener('keydown', clearContentHandler);\n\n  // 點擊外部關閉\n  document.addEventListener('click', (e) => {\n    if (popupContainer && !popupContainer.contains(e.target)) {  // 這裡缺少右括號\n      popupContainer.remove();\n      popupContainer = null;\n      activePopup = null;\n    }\n  });\n\n\n}",
+      "description": "setupParagraphPopup\n功能\n\n為節點的段落輸入框創建按鈕和彈出框，取代輸入框，設置點擊顯示彈出框、鍵盤清除內容和點擊外部關閉的交互行為。\n參數\n\n    paragraphInput (HTMLElement)：段落輸入框元素（textarea.paragraph-input），將被按鈕和彈出框容器取代。\n    content (String)：段落內容，用於設置按鈕顯示文本和彈出框內容。\n    nodeData (Object)：節點數據對象，包含節點 ID 等信息，用於清除內容和重置項目列表。\n\n詳細說明\n\n    創建按鈕和彈出框：\n        創建按鈕元素（button.paragraph-btn），設置類名為 paragraph-btn。\n        設置按鈕文本：若 content 長度超過 50 字符，顯示前 47 字符加省略號；否則顯示完整內容。\n        創建彈出框元素（div.paragraph-popup），設置類名為 paragraph-popup，內容為 content。\n        創建容器元素（div），設置相對定位（position: relative）、行內塊顯示（display: inline-block）和全寬（width: 100%）。\n        將按鈕和彈出框添加到容器，並用容器取代原始輸入框（paragraphInput.replaceWith(container)）。\n        定義變數 popupContainer，初始為 null，用於儲存彈出框的外部容器引用。\n    設置按鈕點擊事件：\n        為按鈕添加 click 事件監聽器：\n            若 popupContainer 已存在且在 document.body 中，移除它。\n            獲取按鈕的屏幕坐標（btnRect），計算按鈕中心點（btnCenterX, btnCenterY）。\n            將中心點轉換為世界坐標（worldX, worldY），考慮平移（translateX, translateY）和縮放（scale）。\n            定義彈出框尺寸（popupWidth: 600, popupHeight: 200）。\n            創建彈出框容器（popupContainer），設置固定定位（position: fixed）、坐標（left: 0, top: 0）、尺寸（width, height）和變換（transform），以將彈出框置於按鈕中心。\n            設置容器和彈出框的 z-index 為 10000，確保層次優先。\n            設置彈出框樣式：顯示（display: block）、絕對定位（position: absolute）、全尺寸（width: 100%, height: 100%）和自動滾動（overflow: auto）。\n            將彈出框添加到 popupContainer，並將 popupContainer 添加到 document.body。\n            設置全局 activePopup 為當前彈出框，重置滾動位置（popupScrollPosition: 0），並調用 updatePopupScroll 更新滾動狀態。\n            使用 e.stopPropagation 阻止事件冒泡。\n    設置鍵盤清除事件：\n        定義 clearContentHandler 函數，監聽鍵盤事件：\n            若按下 'x' 鍵（e.key.toLowerCase() === 'x'）且當前彈出框為活動狀態（activePopup === popup）：\n                清空輸入框值（paragraphInput.value = ''）。\n                調用 resetItemsList，傳遞 nodeData 重置項目列表。\n                用原始輸入框取代容器（container.replaceWith(paragraphInput)）。\n                移除鍵盤事件監聽器。\n                若 popupContainer 存在，移除它並置為 null。\n                清空 activePopup。\n                使用 e.preventDefault 阻止默認行為。\n        為 document 添加 keydown 事件監聽器，綁定 clearContentHandler。\n    設置點擊外部關閉事件：\n        為 document 添加 click 事件監聽器：\n            若 popupContainer 存在且點擊目標不在 popupContainer 內（!popupContainer.contains(e.target)）：\n                移除 popupContainer 並置為 null。\n                清空 activePopup。\n        註：程式碼中 if 塊缺少右括號，假設應為：\n        javascript\n\n        if (popupContainer && !popupContainer.contains(e.target)) {\n          popupContainer.remove();\n          popupContainer = null;\n          activePopup = null;\n        }\n\n參數作用\n\n    paragraphInput：提供原始輸入框，用於取代和還原操作。\n    content：提供段落內容，用於設置按鈕和彈出框顯示。\n    nodeData：提供節點數據，用於清除內容和重置項目列表。\n\n依賴的外部變數/函數\n\n    translateX, translateY (Number)：全局平移量。\n    scale (Number)：全局縮放比例。\n    activePopup (HTMLElement)：全局變數，記錄當前活動彈出框。\n    popupScrollPosition (Number)：全局變數，記錄彈出框滾動位置。\n    updatePopupScroll (Function)：更新彈出框滾動狀態的函數。\n    resetItemsList (Function)：重置項目列表的函數。\n    document：DOM API，用於事件監聽和元素操作。",
+      "isConvertedToButton": true,
+      "items": [
+        "updatePopupScroll",
+        "resetItemsList"
+      ],
+      "metadata": {
+        "contentLength": 2821,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 61,
+      "x": 2152.8054971945867,
+      "y": -4488.159050909099,
+      "title": "createNode 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 62,
+      "x": 2145.5454971945865,
+      "y": -4261.119050909102,
+      "title": "drawConnections 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 63,
+      "x": 2142.7954971945874,
+      "y": -3975.7290509090963,
+      "title": "setupItemEvents 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 64,
+      "x": 2646.624710794591,
+      "y": -5643.6318589091,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "description": "setupAddNodeButton（重複）\n功能\n\n為項目元素的添加節點按鈕設置點擊事件，創建新節點並建立連線。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 65,
+      "x": 2646.624710794591,
+      "y": -5408.6318589091,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 66,
+      "x": 2643.6047107945915,
+      "y": -5166.0618589091,
+      "title": "updatePopupScroll",
+      "content": "// 更新彈出框的滾動位置\nfunction updatePopupScroll() {\n  if (activePopup) {\n    activePopup.scrollTop = popupScrollPosition;\n  }\n}",
+      "description": "updatePopupScroll\n功能\n\n更新當前活動彈出框的滾動位置，根據全局滾動位置變數設置其垂直滾動偏移。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    activePopup (HTMLElement)：當前活動的彈出框元素（div.paragraph-popup）。\n    popupScrollPosition (Number)：記錄彈出框的垂直滾動位置（像素）。\n\n詳細說明\n\n    檢查是否存在活動彈出框（activePopup）。\n    若存在，將彈出框的 scrollTop 屬性設置為全局 popupScrollPosition 的值，以恢復或更新滾動位置。\n\n參數作用\n\n    無直接參數，函數通過全局變數 activePopup 和 popupScrollPosition 操作滾動狀態。\n\n依賴的外部變數\n\n    activePopup：提供當前活動的彈出框元素。\n    popupScrollPosition：提供滾動位置值。\n\n總結\n\nupdatePopupScroll 函數負責同步活動彈出框的滾動位置，確保與全局 popupScrollPosition 一致，適用於管理彈出框（如 setupParagraphPopup 中創建的）在打開或交互時的滾動狀態。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 120,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 67,
+      "x": 2643.6047107945915,
+      "y": -4931.061858909102,
+      "title": "resetItemsList",
+      "content": "function resetItemsList(nodeData) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = `\n  <div class=\"item\">\n  <input type=\"text\" class=\"item-text\" value=\"\">\n  <button class=\"add-node-btn\">+</button>\n  <div class=\"output-port\" data-type=\"output\"></div>\n  </div>\n  `;\n\n  nodeData.outputs = [0];\n  const newItem = itemsContainer.querySelector('.item');\n  setupAddNodeButton(newItem, nodeData, 0, container);\n  setupOutputPort(newItem, nodeData, 0, container);\n\n  // 恢復輸入框（如果被替換）\n  const containerDiv = nodeData.element.querySelector('.paragraph-container');\n  if (containerDiv) {\n    const textarea = document.createElement('textarea');\n    textarea.className = 'paragraph-input';\n    textarea.placeholder = '貼上段落內容...';\n    containerDiv.replaceWith(textarea);\n  }\n}",
+      "description": "resetItemsList\n功能\n\n重置節點的項目列表為單個默認項目，更新輸出端口索引，並恢復段落輸入框（若被替換）。\n參數\n\n    nodeData (Object)：節點數據對象，包含節點 DOM 元素（element）、輸出端口索引（outputs）等信息。\n\n詳細說明\n\n    重置項目列表：\n        查找節點中的項目容器（div.items）。\n        將容器內容設置為單個默認項目（div.item），包含：\n            空的文本輸入框（input.item-text）。\n            添加節點按鈕（button.add-node-btn）。\n            輸出端口（div.output-port），設置 data-type=\"output\"。\n    更新輸出索引：\n        重置 nodeData.outputs 為 [0]，表示僅一個輸出端口。\n    設置新項目事件：\n        查找新創建的項目元素（div.item）。\n        調用 setupAddNodeButton，為新項目的添加按鈕設置事件，傳遞項目元素（newItem）、節點數據（nodeData）、輸出索引（0）和容器（container）。\n        調用 setupOutputPort，為新項目的輸出端口設置事件，傳遞相同參數。\n    恢復段落輸入框：\n        查找節點中的段落容器（div.paragraph-container）。\n        若存在，創建新的段落輸入框（textarea.paragraph-input），設置類名和占位符（“貼上段落內容...”）。\n        用新輸入框取代段落容器。\n\n參數作用\n\n    nodeData：提供節點數據，用於訪問項目容器、更新輸出索引和恢復輸入框。\n\n依賴的外部變數/函數\n\n    container (HTMLElement)：全局主容器元素，用於設置事件。\n    setupAddNodeButton (Function)：為添加節點按鈕設置事件的函數。\n    setupOutputPort (Function)：為輸出端口設置事件的函數。\n\n總結\n\nresetItemsList 函數重置節點的項目列表為單個默認項目，同步更新輸出端口索引，並恢復段落輸入框，適用於清除或重置節點內容的場景（如鍵盤清除事件）。與 setupAddNodeButton 和 setupOutputPort 配合，確保新項目的交互功能完整。",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 810,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 68,
+      "x": 2945.6047107945915,
+      "y": -4984.0618589091,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "description": "setupAddNodeButton（重複）\n功能\n\n為項目元素的添加節點按鈕設置點擊事件，創建新節點並建立連線。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 69,
+      "x": 2941.6047107945915,
+      "y": -4738.061858909104,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 70,
+      "x": 1416.8746115945896,
+      "y": -1415.727167609094,
+      "title": "showUpdateDialog",
+      "content": "// 新增顯示更新對話框的函數\nfunction showUpdateDialog(currentContent, callback) {\n  // 創建對話框元素\n  const dialog = document.createElement('div');\n  dialog.className = 'update-dialog';\n  \n  // 對話框內容\n  dialog.innerHTML = `\n    <div class=\"update-dialog-content\">\n      <textarea id=\"update-dialog-textarea\">${escapeHtml(currentContent)}</textarea>\n      <div class=\"update-dialog-buttons\">\n        <button class=\"update-dialog-cancel\">取消</button>\n        <button class=\"update-dialog-confirm\">確認</button>\n      </div>\n    </div>\n  `;\n  \n  // 添加到body\n  document.body.appendChild(dialog);\n  \n  // 獲取元素引用\n  const textarea = dialog.querySelector('#update-dialog-textarea');\n  const cancelBtn = dialog.querySelector('.update-dialog-cancel');\n  const confirmBtn = dialog.querySelector('.update-dialog-confirm');\n  \n  // 聚焦到textarea\n  textarea.focus();\n  \n  // 取消按鈕點擊事件\n  cancelBtn.addEventListener('click', () => {\n    document.body.removeChild(dialog);\n    callback(null);\n  });\n  \n  // 確認按鈕點擊事件\n  confirmBtn.addEventListener('click', () => {\n    const newContent = textarea.value.trim();\n    document.body.removeChild(dialog);\n    callback(newContent);\n  });\n  \n  // 按ESC鍵關閉對話框\n  dialog.addEventListener('keydown', (e) => {\n    if (e.key === 'Escape') {\n      document.body.removeChild(dialog);\n      callback(null);\n    }\n  });\n}",
+      "description": "showUpdateDialog\n功能\n\n創建並顯示一個更新對話框，允許用戶編輯內容並通過回調函數返回結果，支援取消、確認和 ESC 鍵關閉。\n參數\n\n    currentContent (String)：當前內容，顯示在對話框的文本區域中。\n    callback (Function)：回調函數，接收用戶輸入的新內容（確認時）或 null（取消或關閉時）。\n\n詳細說明\n\n    創建對話框：\n        創建對話框元素（div.update-dialog），設置類名為 update-dialog。\n        設置對話框 HTML 內容，包含：\n            內容容器（div.update-dialog-content）。\n            文本區域（textarea#update-dialog-textarea），初始值為轉義後的 currentContent（使用 escapeHtml）。\n            按鈕容器（div.update-dialog-buttons），包含取消按鈕（button.update-dialog-cancel）和確認按鈕（button.update-dialog-confirm）。\n        將對話框添加到 document.body。\n    獲取元素引用：\n        獲取文本區域（textarea）、取消按鈕和確認按鈕的引用。\n    設置焦點：\n        將焦點設置到文本區域（textarea.focus()）。\n    設置取消按鈕事件：\n        為取消按鈕添加 click 事件監聽器，移除對話框並調用回調函數，傳遞 null。\n    設置確認按鈕事件：\n        為確認按鈕添加 click 事件監聽器，獲取文本區域的值（去除首尾空格），移除對話框，並調用回調函數，傳遞新內容。\n    設置 ESC 鍵事件：\n        為對話框添加 keydown 事件監聽器，若按下 ESC 鍵（e.key === 'Escape'），移除對話框並調用回調函數，傳遞 null。\n\n參數作用\n\n    currentContent：提供初始內容，顯示在文本區域中。\n    callback：處理用戶輸入結果，支援確認或取消操作。\n\n依賴的外部變數/函數\n\n    escapeHtml (Function)：HTML 轉義函數，用於處理文本區域內容。\n    document：DOM API，用於元素操作和事件監聽。",
+      "isConvertedToButton": true,
+      "items": [
+        "escapeHtml"
+      ],
+      "metadata": {
+        "contentLength": 1309,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 71,
+      "x": 1515.272507194592,
+      "y": 490.0107180909093,
+      "title": "arrangePopups",
+      "content": "function arrangePopups() {\n  const popups = Array.from(ALL_ACTIVE_POPUPS);\n  if (popups.length === 0) return;\n\n  const screenWidth = window.innerWidth;\n  const screenHeight = window.innerHeight;\n  const margin = 10;\n\n  // 统一尺寸配置\n  const uniformSize = {\n  small: { width: Math.min(350, screenWidth * 0.4), height: Math.min(250, screenHeight * 0.35) },\n  medium: { width: Math.min(400, screenWidth * 0.5), height: Math.min(300, screenHeight * 0.45) }\n  };\n\n  // 1. 设置弹窗尺寸\n  popups.forEach((popup, index) => {\n    if (index >= 5) { // 第6个开始\n    popup.style.width = `${uniformSize.small.width}px`;\n    popup.style.height = `${uniformSize.small.height}px`;\n    } else if (index >= 3) { // 第4-5个\n    popup.style.width = `${uniformSize.medium.width}px`;\n    popup.style.height = `${uniformSize.medium.height}px`;\n    } else { // 前3个\n    popup.style.maxWidth = `${screenWidth * 0.8}px`;\n    popup.style.maxHeight = `${screenHeight * 0.8}px`;\n      popup.style.width = '';\n      popup.style.height = '';\n    }\n    popup.style.display = 'block';\n  });\n\n  // 2. 处理1-3个弹窗（宽度自适应）\n  if (popups.length <= 3) {\n    const firstThree = popups.slice(0, 3);\n    adjustWidths(firstThree, margin, screenWidth);\n    arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n    return;\n  }\n\n  // 排列前3个（带宽度自适应）\n  const firstThree = popups.slice(0, 3);\n  adjustWidths(firstThree, margin, screenWidth);\n  arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n\n  // 3. 处理第4-5个弹窗（新增高度居中逻辑）\n  if (popups.length >= 4) {\n    // 计算各列高度\n    const colHeights = firstThree.map(popup =>\n    parseFloat(popup.style.top) + popup.getBoundingClientRect().height\n    );\n\n    // 找出最短和中间高度的列\n    const sortedIndices = [...colHeights]\n  .map((h, i) => ({h, i}))\n    .sort((a, b) => a.h - b.h)\n    .map(obj => obj.i);\n\n    const shortestCol = sortedIndices[0];\n    const middleCol = sortedIndices[1];\n\n    // 放置第4个在最短列下方\n    const fourthPopup = popups[3];\n    const fourthRect = fourthPopup.getBoundingClientRect();\n    let fourthY = colHeights[shortestCol] + margin;\n\n    // 放置第5个在中间高度列下方\n    const fifthPopup = popups.length >= 5 ? popups[4] : null;\n    const fifthRect = fifthPopup?.getBoundingClientRect();\n    let fifthY = colHeights[middleCol] + margin;\n\n    // 计算整体高度\n    const totalHeight = Math.max(\n    fourthY + fourthRect.height,\n    fifthY + (fifthRect?.height || 0)\n    );\n\n    // 尝试垂直居中\n    const centerOffset = Math.max(0, (screenHeight - totalHeight) / 2);\n\n    if (centerOffset > 0) {\n      // 有足够空间居中\n      firstThree.forEach(popup => {\n      popup.style.top = `${parseFloat(popup.style.top) + centerOffset}px`;\n      });\n\n    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;\n    fourthPopup.style.top = `${fourthY + centerOffset}px`;\n\n      if (fifthPopup) {\n      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;\n      fifthPopup.style.top = `${fifthY + centerOffset}px`;\n      }\n    } else {\n      // 需要缩放高度\n      const scaleFactor = screenHeight / totalHeight;\n\n      // 调整前3个高度\n      firstThree.forEach(popup => {\n        const rect = popup.getBoundingClientRect();\n      popup.style.height = `${rect.height * scaleFactor * 0.9}px`; // 保留10%边距\n      });\n\n      // 重新计算位置\n      arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);\n      const newColHeights = firstThree.map(popup =>\n      parseFloat(popup.style.top) + popup.getBoundingClientRect().height\n      );\n\n      // 重新放置第4-5个\n    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;\n    fourthPopup.style.top = `${newColHeights[shortestCol] + margin}px`;\n\n      if (fifthPopup) {\n      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;\n      fifthPopup.style.top = `${newColHeights[middleCol] + margin}px`;\n      }\n    }\n  }\n\n  // 4. 处理第6+个弹窗（左上角网格排列）\n  if (popups.length >= 6) {\n    let currentX = margin;\n    let currentY = margin;\n    let rowHeight = 0;\n\n    for (let i = 5; i < popups.length; i++) {\n      const popup = popups[i];\n      const rect = popup.getBoundingClientRect();\n\n      // 换行检查\n      if (currentX + rect.width > screenWidth) {\n        currentX = margin;\n        currentY += rowHeight + margin;\n        rowHeight = 0;\n      }\n\n      // 设置位置\n    popup.style.left = `${currentX}px`;\n    popup.style.top = `${currentY}px`;\n\n      // 更新参数\n      currentX += rect.width + margin;\n      rowHeight = Math.max(rowHeight, rect.height);\n\n      // 超出屏幕底部处理\n      if (currentY + rect.height > screenHeight) {\n        currentX = margin;\n        currentY = margin;\n      }\n    }\n  }\n}",
+      "description": "以下是對提供的程式碼中兩個函數（showUpdateDialog 和 updateNodeContent）的名稱、功能及參數作用的詳細說明，採用中文並遵循正式語氣，確保清晰、結構化且精確。根據您的要求，我將僅提供功能描述和必要分析，不包括補充觀察與建議或 XSS 防護內容。當前時間（2025年6月25日，香港時間13:04）對分析無直接影響。\n1. 函數：showUpdateDialog\n功能\n\n創建並顯示一個更新對話框，允許用戶編輯內容並通過回調函數返回結果，支援取消、確認和 ESC 鍵關閉。\n參數\n\n    currentContent (String)：當前內容，顯示在對話框的文本區域中。\n    callback (Function)：回調函數，接收用戶輸入的新內容（確認時）或 null（取消或關閉時）。\n\n詳細說明\n\n    創建對話框：\n        創建對話框元素（div.update-dialog），設置類名為 update-dialog。\n        設置對話框 HTML 內容，包含：\n            內容容器（div.update-dialog-content）。\n            文本區域（textarea#update-dialog-textarea），初始值為轉義後的 currentContent（使用 escapeHtml）。\n            按鈕容器（div.update-dialog-buttons），包含取消按鈕（button.update-dialog-cancel）和確認按鈕（button.update-dialog-confirm）。\n        將對話框添加到 document.body。\n    獲取元素引用：\n        獲取文本區域（textarea）、取消按鈕和確認按鈕的引用。\n    設置焦點：\n        將焦點設置到文本區域（textarea.focus()）。\n    設置取消按鈕事件：\n        為取消按鈕添加 click 事件監聽器，移除對話框並調用回調函數，傳遞 null。\n    設置確認按鈕事件：\n        為確認按鈕添加 click 事件監聽器，獲取文本區域的值（去除首尾空格），移除對話框，並調用回調函數，傳遞新內容。\n    設置 ESC 鍵事件：\n        為對話框添加 keydown 事件監聽器，若按下 ESC 鍵（e.key === 'Escape'），移除對話框並調用回調函數，傳遞 null。\n\n參數作用\n\n    currentContent：提供初始內容，顯示在文本區域中。\n    callback：處理用戶輸入結果，支援確認或取消操作。\n\n依賴的外部變數/函數\n\n    escapeHtml (Function)：HTML 轉義函數，用於處理文本區域內容。\n    document：DOM API，用於元素操作和事件監聽。\n\n2. 函數：updateNodeContent\n功能\n\n更新節點的內容，重新生成項目列表並智能恢復連線，根據新內容提取函數信息並更新標題和高亮狀態。\n參數\n\n    nodeData (Object)：節點數據對象，包含節點 DOM 元素（element）、ID（id）、輸出端口索引（outputs）等信息。\n    newContent (String)：新內容，用於更新彈出框、按鈕和項目列表。\n\n詳細說明\n\n    更新內容顯示：\n        獲取節點元素（nodeData.element）。\n        更新彈出框（.paragraph-popup）的內容為 newContent。\n        更新按鈕（.paragraph-btn）的顯示文本：若 newContent 長度超過 50 字符，顯示前 47 字符加省略號；否則顯示完整內容。\n        將 newContent 存儲在按鈕的 dataset.originalContent 屬性中。\n    提取函數信息：\n        使用 extractFunctionName 從 newContent 中提取函數名稱。\n        若提取到函數名稱，更新節點標題（.node-title）的值，並調用 updateSameNameHighlights 更新同名節點高亮狀態。\n    獲取新舊函數列表：\n        使用 extractCalledFunctions 提取新內容中的被調用函數名稱，排除提取的函數名稱（newFunctionName）。\n        獲取舊項目列表（.item-text 的值數組）。\n    建立連線映射表：\n        創建 connectionMap（Map 對象），儲存舊連線信息。\n        遍歷 connections，若連線的起始節點為當前節點（conn.fromNode === nodeData.id），則以“位置_名稱”作為鍵（${conn.fromOutput}_${itemName}），儲存目標節點（toNode）和輸入端口（toInput）。\n    清除舊連線：\n        過濾 connections，移除所有從當前節點出發的連線。\n    重建項目列表：\n        清空項目容器（.items）的內容。\n        重置 nodeData.outputs 為空數組。\n    智能重建項目和連線：\n        遍歷 newCalledFunctions，為每個函數名稱執行：\n            創建新項目元素（div.item），包含文本輸入框（值為轉義後的函數名稱）、添加節點按鈕和輸出端口。\n            將項目添加到項目容器，並將索引（newIndex）添加到 nodeData.outputs。\n            調用 setupAddNodeButton 和 setupOutputPort，設置項目的交互事件。\n            嘗試恢復連線：\n                情況 1：檢查是否存在完全匹配的連線（位置和名稱相同），若有則恢復連線。\n                情況 2：若無完全匹配，查找名稱匹配的連線（oldFunc === newFunc），確保連線未被使用，恢復連線並從 connectionMap 中移除以防重複。\n    最終處理：\n        調用 drawConnections 刷新連線畫面。\n        調用 showStatusMessage，顯示成功消息“內容已更新，連接精確保持”。\n\n參數作用\n\n    nodeData：提供節點數據，用於更新內容、項目和連線。\n    newContent：提供新內容，用於更新顯示和提取函數信息。\n\n依賴的外部變數/函數\n\n    extractFunctionName (Function)：提取函數名稱。\n    extractCalledFunctions (Function)：提取被調用函數名稱。\n    updateSameNameHighlights (Function)：更新同名節點高亮。\n    connections (Array)：全局連線數組。\n    container (HTMLElement)：全局主容器，用於設置事件。\n    setupAddNodeButton (Function)：設置添加節點按鈕事件。\n    setupOutputPort (Function)：設置輸出端口事件。\n    drawConnections (Function)：繪製連線。\n    showStatusMessage (Function)：顯示狀態消息。\n    escapeHtml (Function)：HTML 轉義函數，用於處理項目名稱。\n",
+      "isConvertedToButton": true,
+      "items": [
+        "adjustWidths",
+        "arrangeGridLayout"
+      ],
+      "metadata": {
+        "contentLength": 4573,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 72,
+      "x": 1514.6997799218657,
+      "y": 1008.3379908181821,
+      "title": "resetItemsList",
+      "content": "function resetItemsList(nodeData) {\n  const itemsContainer = nodeData.element.querySelector('.items');\n  itemsContainer.innerHTML = `\n  <div class=\"item\">\n  <input type=\"text\" class=\"item-text\" value=\"\">\n  <button class=\"add-node-btn\">+</button>\n  <div class=\"output-port\" data-type=\"output\"></div>\n  </div>\n  `;\n\n  nodeData.outputs = [0];\n  const newItem = itemsContainer.querySelector('.item');\n  setupAddNodeButton(newItem, nodeData, 0, container);\n  setupOutputPort(newItem, nodeData, 0, container);\n\n  // 恢復輸入框（如果被替換）\n  const containerDiv = nodeData.element.querySelector('.paragraph-container');\n  if (containerDiv) {\n    const textarea = document.createElement('textarea');\n    textarea.className = 'paragraph-input';\n    textarea.placeholder = '貼上段落內容...';\n    containerDiv.replaceWith(textarea);\n  }\n}",
+      "description": "arrangePopups\n功能\n\n排列所有活動彈出框，根據數量和屏幕尺寸調整其尺寸和位置，支援自適應寬度、垂直居中和網格佈局。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    ALL_ACTIVE_POPUPS (Set)：全局集合，儲存所有活動彈出框元素。\n    window.innerWidth, window.innerHeight (Number)：瀏覽器視窗的寬度和高度。\n    adjustWidths (Function)：調整彈出框寬度的函數。\n    arrangeGridLayout (Function)：排列彈出框為網格佈局的函數。\n\n詳細說明\n\n    初始化：\n        將 ALL_ACTIVE_POPUPS 轉換為數組（popups），若數量為 0 則直接返回。\n        獲取屏幕寬度（screenWidth）和高度（screenHeight），設置邊距（margin: 10）。\n        定義統一尺寸配置（uniformSize）：\n            小尺寸：寬度為 350 或屏幕寬度的 40%（取較小值），高度為 250 或屏幕高度的 35%。\n            中尺寸：寬度為 400 或屏幕寬度的 50%，高度為 300 或屏幕高度的 45%。\n    設置彈出框尺寸：\n        遍歷所有彈出框，根據索引設置尺寸：\n            第 6 個及以上（index >= 5）：使用小尺寸（uniformSize.small）。\n            第 4-5 個（index >= 3）：使用中尺寸（uniformSize.medium）。\n            前 3 個（index < 3）：設置最大寬高為屏幕的 80%，清除固定寬高以自適應內容。\n        設置所有彈出框為可見（display: block）。\n    處理 1-3 個彈出框：\n        若彈出框數量不超過 3：\n            選取前 3 個彈出框（firstThree）。\n            調用 adjustWidths 調整寬度，傳遞彈出框、邊距和屏幕寬度。\n            調用 arrangeGridLayout 排列為網格佈局，傳遞彈出框、邊距、屏幕寬度和高度。\n            結束函數執行。\n    排列前 3 個彈出框：\n        選取前 3 個彈出框（firstThree）。\n        調用 adjustWidths 和 arrangeGridLayout，與 1-3 個彈出框的處理相同。\n    處理第 4-5 個彈出框：\n        若彈出框數量大於或等於 4：\n            計算前 3 個彈出框的列高度（colHeights），為各彈出框頂部位置加上其高度。\n            根據列高度排序，確定最短列（shortestCol）和中間列（middleCol）。\n            為第四個彈出框（popups[3]）設置位置，位於最短列下方（fourthY = colHeights[shortestCol] + margin）。\n            若存在第五個彈出框（popups[4]），設置其在中間列下方（fifthY = colHeights[middleCol] + margin）。\n            計算總高度（fourthY + fourthRect.height 和 fifthY + fifthRect.height 的最大值）。\n            若屏幕高度足以容納（centerOffset > 0）：\n                將所有前 3 個彈出框垂直居中（top += centerOffset）。\n                設置第四和第五個彈出框的位置，與其對應列對齊並應用居中偏移。\n            若屏幕高度不足：\n                計算縮放因子（scaleFactor = screenHeight / totalHeight）。\n                調整前 3 個彈出框的高度（乘以 scaleFactor * 0.9）。\n                重新調用 arrangeGridLayout 計算新列高度（newColHeights）。\n                重新設置第四和第五個彈出框的位置，位於對應列下方。\n    處理第 6 個及以上：\n        若彈出框數量大於或等於 6：\n            初始化左上角坐標（currentX, currentY）為邊距，行高（rowHeight）為 0。\n            從第 6 個彈出框（i = 5）開始，遍歷：\n                若當前 x 坐標加上彈出框寬度超過屏幕寬度，換行（重置 currentX，currentY += rowHeight + margin）。\n                設置彈出框位置（left: currentX, top: currentY）。\n                更新 currentX（增加彈出框寬度加邊距），更新 rowHeight（取最大值）。\n                若 currentY + 彈出框高度 超過屏幕高度，重置為左上角（currentX = margin, currentY = margin）。\n\n參數規則\n\n    無直接參數，函數通過全局變數 ALL_ACTIVE_POPUPS 和視窗尺寸操作。\n\n依賴的外部變數/函數\n\n    ALL_ACTIVE_POPUPS：儲存活動的彈出框元素。\n    window.innerWidth, window.innerHeight：提供視窗尺寸。\n    adjustWidths：調整彈出框寬度。\n    arrangeGridLayout：排列網格佈局。\n    getBoundingClientRect：DOM API，獲取元素尺寸和位置。",
+      "isConvertedToButton": true,
+      "items": [
+        "setupAddNodeButton",
+        "setupOutputPort"
+      ],
+      "metadata": {
+        "contentLength": 810,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 73,
+      "x": 1871.06921159459,
+      "y": -1456.7604676090932,
+      "title": "escapeHtml 節點",
+      "content": "",
+      "description": "resetItemsList\n功能\n\n重置節點的項目列表為單個默認項目，更新輸出端口索引，並恢復段落輸入框（若被替換）。\n參數\n\n    nodeData (Object)：節點數據對象，包含節點 DOM 元素（element）、輸出端口索引（outputs）等信息。\n\n詳細說明\n\n    重置項目列表：\n        查找節點中的項目容器（div.items）。\n        將容器內容設置為單個默認項目（div.item），包含：\n            空的文本輸入框（input.item-text）。\n            添加節點按鈕（button.add-node-btn）。\n            輸出端口（div.output-port），設置 data-type=\"output\"。\n    更新輸出索引：\n        重置 nodeData.outputs 為 [0]，表示僅一個輸出端口。\n    設置新項目事件：\n        查找新創建的項目元素（div.item）。\n        調用 setupAddNodeButton，為新項目的添加按鈕設置事件，傳遞項目元素（newItem）、節點數據（nodeData）、輸出索引（0）和容器（container）。\n        調用 setupOutputPort，為新項目的輸出端口設置事件，傳遞相同參數。\n    恢復段落輸入框：\n        查找節點中的段落容器（div.paragraph-container）。\n        若存在，創建新的段落輸入框（textarea.paragraph-input），設置類名和占位符（“貼上段落內容...”）。\n        用新輸入框取代段落容器。\n\n參數作用\n\n    nodeData：提供節點數據，用於訪問項目容器、更新輸出索引和恢復輸入框。\n\n依賴的外部變數/函數\n\n    container (HTMLElement)：全局主容器元素，用於設置事件。\n    setupAddNodeButton (Function)：為添加節點按鈕設置事件的函數。\n    setupOutputPort (Function)：為輸出端口設置事件的函數。\n\n總結\n\nresetItemsList 函數重置節點的項目列表為單個默認項目，同步更新輸出端口索引，並恢復段落輸入框，適用於清除或重置節點內容的場景（如鍵盤清除事件）。與 setupAddNodeButton 和 setupOutputPort 配合，確保新項目的交互功能完整。",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 74,
+      "x": 1880.4725071945923,
+      "y": 404.0198090000003,
+      "title": "adjustWidths",
+      "content": "// 宽度自适应辅助函数\nfunction adjustWidths(popups, margin, screenWidth) {\n  let totalWidth = 0;\n  const originalWidths = [];\n\n  popups.forEach(popup => {\n    popup.style.width = '';\n    const rect = popup.getBoundingClientRect();\n    originalWidths.push(rect.width);\n    totalWidth += rect.width;\n  });\n\n  totalWidth += margin * (popups.length - 1);\n\n  if (totalWidth > screenWidth) {\n    const scaleFactor = (screenWidth - margin * (popups.length - 1)) /\n    (totalWidth - margin * (popups.length - 1));\n\n    popups.forEach((popup, i) => {\n    popup.style.width = `${originalWidths[i] * scaleFactor}px`;\n    });\n  }\n}",
+      "description": "extractFunctionName\n功能\n\n從給定的程式碼內容中提取函數名稱。\n參數\n\n    content (String)：包含程式碼的字符串，通常為函數定義的內容。\n\n詳細說明\n\n    使用正則表達式 /function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/ 匹配函數名稱：\n        function\\s+：匹配關鍵字 function 後跟隨一個或多個空格。\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，要求以字母、底線或美元符號開頭，後跟隨零個或多個字母、數字、底線或美元符號。\n    若匹配成功，返回捕獲的函數名稱（functionNameMatch[1]）；否則返回 null。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數名稱。\n\n依賴的外部變數\n\n    無直接依賴外部變數，僅使用內部正則表達式。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 610,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 75,
+      "x": 1881.3815981036832,
+      "y": 609.7925362727274,
+      "title": "arrangeGridLayout",
+      "content": "// 原有的網格佈局函數\nfunction arrangeGridLayout(popups, margin, screenWidth, screenHeight) {\n  if (popups.length === 0) return;\n\n  // 計算所有彈出框的總面積和平均寬高\n  let totalWidth = 0;\n  let totalHeight = 0;\n  popups.forEach(popup => {\n    const rect = popup.getBoundingClientRect();\n    totalWidth += rect.width + margin;\n    totalHeight += rect.height + margin;\n  });\n\n  // 計算最接近正方形的行列分佈\n  const aspectRatio = screenWidth / screenHeight;\n  let cols = Math.ceil(Math.sqrt(popups.length * aspectRatio));\n  let rows = Math.ceil(popups.length / cols);\n\n  // 調整行列數以更貼近正方形\n  while (rows > cols && (rows - 1) * cols >= popups.length) {\n    rows--;\n    cols = Math.ceil(popups.length / rows);\n  }\n\n  // 計算每行列的最大寬高\n  const colWidths = new Array(cols).fill(0);\n  const rowHeights = new Array(rows).fill(0);\n  popups.forEach((popup, index) => {\n    const col = index % cols;\n    const row = Math.floor(index / cols);\n    const rect = popup.getBoundingClientRect();\n    colWidths[col] = Math.max(colWidths[col], rect.width);\n    rowHeights[row] = Math.max(rowHeights[row], rect.height);\n  });\n\n  // 計算總佈局寬高\n  const layoutWidth = colWidths.reduce((sum, width) => sum + width + margin, -margin);\n  const layoutHeight = rowHeights.reduce((sum, height) => sum + height + margin, -margin);\n\n  // 計算起始位置（居中）\n  const startX = (screenWidth - layoutWidth) / 2;\n  const startY = (screenHeight - layoutHeight) / 2;\n\n  // 設置每個彈出框的位置\n  const colPositions = [];\n  let currentX = startX;\n  for (let i = 0; i < cols; i++) {\n    colPositions.push(currentX);\n    currentX += colWidths[i] + margin;\n  }\n\n  const rowPositions = [];\n  let currentY = startY;\n  for (let i = 0; i < rows; i++) {\n    rowPositions.push(currentY);\n    currentY += rowHeights[i] + margin;\n  }\n\n  popups.forEach((popup, index) => {\n    const col = index % cols;\n    const row = Math.floor(index / cols);\n    const rect = popup.getBoundingClientRect();\n\n  popup.style.left = `${colPositions[col]}px`;\n  popup.style.top = `${rowPositions[row]}px`;\n  popup.style.width = `${rect.width}px`;\n  popup.style.height = `${rect.height}px`;\n  });\n}",
+      "description": "updateSameNameHighlights\n功能\n\n更新節點的高亮狀態，移除所有現有同名高亮，並為具有相同標題的節點（兩個或以上）添加高亮類。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    document.querySelectorAll：DOM API，用於選擇所有 .node 元素。\n\n詳細說明\n\n    移除現有高亮：\n        使用 document.querySelectorAll('.node') 選擇所有節點元素。\n        遍歷並移除每個節點的 highlight-same-name 類。\n    建立名稱映射：\n        創建 nameMap 對象，用於將節點標題映射到節點數組。\n        遍歷 nodes，獲取每個節點的標題（.node-title 的值）。\n        將節點按標題分組，存儲在 nameMap[title] 數組中。\n    添加高亮：\n        遍歷 nameMap 的鍵值對（[title, sameNameNodes]）。\n        若某標題對應的節點數（sameNameNodes.length）大於 1，則為該標題的所有節點添加 highlight-same-name 類。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 訪問節點數據和 DOM 元素。\n\n依賴的外部變數\n\n    nodes：提供節點數據，包含 element 和標題信息。\n    document.querySelectorAll：DOM API，用於選擇節點元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 2062,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 76,
+      "x": 1874.399779921865,
+      "y": 935.9288999090908,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "description": "extractCalledFunctions\n功能\n\n從給定的程式碼內容中提取被調用的函數名稱，排除指定的函數名稱和黑名單中的函數。\n參數\n\n    content (String)：包含程式碼的字符串，用於查找函數調用。\n    functionNameToExclude (String)：需要排除的函數名稱（如自身函數名稱）。\n\n詳細說明\n\n    使用正則表達式 /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g 匹配函數調用：\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，以字母、底線或美元符號開頭。\n        \\s*\\([^)]*\\)：匹配函數調用的小括號及其參數，允許空格。\n        /g：全局匹配，查找所有符合條件的調用。\n    創建 Set 對象（functionNames）儲存唯一的函數名稱。\n    遍歷所有匹配項，提取調用函數名稱（calledFunctionName）。\n    檢查函數名稱是否不在黑名單（FUNCTION_BLACKLIST）中且不等於要排除的名稱（functionNameToExclude），若滿足條件則添加到 functionNames。\n    將 functionNames 轉換為數組並返回。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數調用。\n    functionNameToExclude：指定要排除的函數名稱，防止自引用或無關函數被包含。\n\n依賴的外部變數\n\n    FUNCTION_BLACKLIST (Array)：全局黑名單數組，包含不應提取的函數名稱。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 77,
+      "x": 1874.399779921865,
+      "y": 1195.3379908181814,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 78,
+      "x": 1408.9149215945909,
+      "y": -792.9174176090922,
+      "title": "updateNodeContent",
+      "content": "function updateNodeContent(nodeData, newContent) {\n  const element = nodeData.element;\n  \n  // 1. 更新內容顯示\n  const popup = element.querySelector('.paragraph-popup');\n  const btn = element.querySelector('.paragraph-btn');\n  popup.textContent = newContent;\n  btn.textContent = newContent.length > 50 \n    ? newContent.substring(0, 47) + '...' \n    : newContent;\n  btn.dataset.originalContent = newContent;\n\n  // 2. 提取函數信息\n  const newFunctionName = extractFunctionName(newContent);\n  if (newFunctionName) {\n    element.querySelector('.node-title').value = newFunctionName;\n    updateSameNameHighlights();\n  }\n\n  // 3. 獲取新舊函數列表\n  const newCalledFunctions = extractCalledFunctions(newContent, newFunctionName);\n  const oldItems = Array.from(element.querySelectorAll('.item-text')).map(item => item.value);\n\n  // 4. 建立精確連接映射表（使用位置+名稱作為鍵）\n  const connectionMap = new Map();\n  connections.forEach(conn => {\n    if (conn.fromNode === nodeData.id) {\n      const itemName = oldItems[conn.fromOutput];\n      connectionMap.set(`${conn.fromOutput}_${itemName}`, {\n        toNode: conn.toNode,\n        toInput: conn.toInput\n      });\n    }\n  });\n\n  // 5. 完全清除舊連接\n  connections = connections.filter(conn => conn.fromNode !== nodeData.id);\n\n  // 6. 重建項目列表\n  const itemsContainer = element.querySelector('.items');\n  itemsContainer.innerHTML = '';\n  nodeData.outputs = [];\n\n  // 7. 智能重建項目和連接\n  newCalledFunctions.forEach((newFunc, newIndex) => {\n    // 創建新項目\n    const itemDiv = document.createElement('div');\n    itemDiv.className = 'item';\n    itemDiv.innerHTML = `\n      <input type=\"text\" class=\"item-text\" value=\"${escapeHtml(newFunc)}\">\n      <button class=\"add-node-btn\">+</button>\n      <div class=\"output-port\" data-type=\"output\"></div>\n    `;\n    itemsContainer.appendChild(itemDiv);\n    nodeData.outputs.push(newIndex);\n\n    // 設置交互\n    setupAddNodeButton(itemDiv, nodeData, newIndex, container);\n    setupOutputPort(itemDiv, nodeData, newIndex, container);\n\n    // 恢復連接的智能邏輯\n    let connectionRestored = false;\n    \n    // 情況1：完全匹配原位置和名稱\n    const exactKey = `${newIndex}_${newFunc}`;\n    if (connectionMap.has(exactKey)) {\n      const { toNode, toInput } = connectionMap.get(exactKey);\n      connections.push({\n        fromNode: nodeData.id,\n        fromOutput: newIndex,\n        toNode,\n        toInput\n      });\n      connectionRestored = true;\n    }\n    \n    // 情況2：名稱匹配但位置變化（防止因插入新項目導致錯誤連接）\n    if (!connectionRestored) {\n      for (const [key, connData] of connectionMap) {\n        const [oldIndex, oldFunc] = key.split('_');\n        if (oldFunc === newFunc) {\n          // 確保這是第一個匹配的且未被使用的連接\n          if (!connections.some(c => \n            c.fromNode === nodeData.id && \n            c.toNode === connData.toNode &&\n            c.toInput === connData.toInput\n          )) {\n            connections.push({\n              fromNode: nodeData.id,\n              fromOutput: newIndex,\n              toNode: connData.toNode,\n              toInput: connData.toInput\n            });\n            connectionMap.delete(key); // 防止重複使用\n            break;\n          }\n        }\n      }\n    }\n  });\n\n  // 8. 最終處理\n  drawConnections();\n  showStatusMessage('內容已更新，連接精確保持', 'success');\n}",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "extractFunctionName",
+        "updateSameNameHighlights",
+        "extractCalledFunctions",
+        "escapeHtml",
+        "setupAddNodeButton",
+        "setupOutputPort",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 3167,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 79,
+      "x": 1881.3415271400463,
+      "y": -1181.4987728818191,
+      "title": "extractFunctionName",
+      "content": "// 提取到外部的工具函數\nfunction extractFunctionName(content) {\n  const functionNameMatch = content.match(/function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/);\n  return functionNameMatch ? functionNameMatch[1] : null;\n}",
+      "description": "extractFunctionName\n功能\n\n從給定的程式碼內容中提取函數名稱。\n參數\n\n    content (String)：包含程式碼的字符串，通常為函數定義的內容。\n\n詳細說明\n\n    使用正則表達式 /function\\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/ 匹配函數名稱：\n        function\\s+：匹配關鍵字 function 後跟隨一個或多個空格。\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，要求以字母、底線或美元符號開頭，後跟隨零個或多個字母、數字、底線或美元符號。\n    若匹配成功，返回捕獲的函數名稱（functionNameMatch[1]）；否則返回 null。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數名稱。\n\n依賴的外部變數\n\n    無直接依賴外部變數，僅使用內部正則表達式。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 197,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 80,
+      "x": 1886.7960725945914,
+      "y": -969.8760456090926,
+      "title": "updateSameNameHighlights",
+      "content": "// 新增函數：更新所有同名節點的高亮狀態\nfunction updateSameNameHighlights() {\n  // 先移除所有高亮\n  document.querySelectorAll('.node').forEach(node => {\n    node.classList.remove('highlight-same-name');\n  });\n\n  // 建立節點名稱映射\nconst nameMap = {};\n  nodes.forEach(node => {\n    const title = node.element.querySelector('.node-title').value;\n    if (!nameMap[title]) {\n      nameMap[title] = [];\n    }\n    nameMap[title].push(node);\n  });\n\n  // 為有相同名稱的節點添加高亮\n  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {\n    if (sameNameNodes.length > 1) {\n      sameNameNodes.forEach(node => {\n        node.element.classList.add('highlight-same-name');\n      });\n    }\n  });\n}",
+      "description": "updateSameNameHighlights\n功能\n\n更新節點的高亮狀態，移除所有現有同名高亮，並為具有相同標題的節點（兩個或以上）添加高亮類。\n參數\n\n無直接參數，依賴以下全局變數：\n\n    nodes (Array)：全局節點數組，包含每個節點的數據對象（id, element 等）。\n    document.querySelectorAll：DOM API，用於選擇所有 .node 元素。\n\n詳細說明\n\n    移除現有高亮：\n        使用 document.querySelectorAll('.node') 選擇所有節點元素。\n        遍歷並移除每個節點的 highlight-same-name 類。\n    建立名稱映射：\n        創建 nameMap 對象，用於將節點標題映射到節點數組。\n        遍歷 nodes，獲取每個節點的標題（.node-title 的值）。\n        將節點按標題分組，存儲在 nameMap[title] 數組中。\n    添加高亮：\n        遍歷 nameMap 的鍵值對（[title, sameNameNodes]）。\n        若某標題對應的節點數（sameNameNodes.length）大於 1，則為該標題的所有節點添加 highlight-same-name 類。\n\n參數作用\n\n    無直接參數，函數通過全局 nodes 訪問節點數據和 DOM 元素。\n\n依賴的外部變數\n\n    nodes：提供節點數據，包含 element 和標題信息。\n    document.querySelectorAll：DOM API，用於選擇節點元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 649,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 81,
+      "x": 1885.4650725945912,
+      "y": -762.7240456090925,
+      "title": "extractCalledFunctions",
+      "content": "function extractCalledFunctions(content, functionNameToExclude) {\n  const functionCallRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g;\n  const functionNames = new Set();\n  let match;\n\n  while ((match = functionCallRegex.exec(content)) !== null) {\n    const calledFunctionName = match[1];\n    // 檢查是否在黑名單中或是要排除的函數名\n    if (!FUNCTION_BLACKLIST.includes(calledFunctionName) &&\n    calledFunctionName !== functionNameToExclude) {\n      functionNames.add(calledFunctionName);\n    }\n  }\n\n  return Array.from(functionNames);\n}",
+      "description": "extractCalledFunctions\n功能\n\n從給定的程式碼內容中提取被調用的函數名稱，排除指定的函數名稱和黑名單中的函數。\n參數\n\n    content (String)：包含程式碼的字符串，用於查找函數調用。\n    functionNameToExclude (String)：需要排除的函數名稱（如自身函數名稱）。\n\n詳細說明\n\n    使用正則表達式 /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g 匹配函數調用：\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，以字母、底線或美元符號開頭。\n        \\s*\\([^)]*\\)：匹配函數調用的小括號及其參數，允許空格。\n        /g：全局匹配，查找所有符合條件的調用。\n    創建 Set 對象（functionNames）儲存唯一的函數名稱。\n    遍歷所有匹配項，提取調用函數名稱（calledFunctionName）。\n    檢查函數名稱是否不在黑名單（FUNCTION_BLACKLIST）中且不等於要排除的名稱（functionNameToExclude），若滿足條件則添加到 functionNames。\n    將 functionNames 轉換為數組並返回。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數調用。\n    functionNameToExclude：指定要排除的函數名稱，防止自引用或無關函數被包含。\n\n依賴的外部變數\n\n    FUNCTION_BLACKLIST (Array)：全局黑名單數組，包含不應提取的函數名稱。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 521,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 82,
+      "x": 1881.7960725945914,
+      "y": -560.1760456090923,
+      "title": "escapeHtml",
+      "content": "// HTML转义辅助函数\nfunction escapeHtml(unsafe) {\n  return unsafe\n  .replace(/&/g, \"&amp;\")\n  .replace(/</g, \"&lt;\")\n  .replace(/>/g, \"&gt;\")\n  .replace(/\"/g, \"&quot;\")\n  .replace(/'/g, \"&#039;\");\n}",
+      "description": "resetItemsList\n功能\n\n重置節點的項目列表為單個默認項目，更新輸出端口索引，並恢復段落輸入框（若被替換）。\n參數\n\n    nodeData (Object)：節點數據對象，包含節點 DOM 元素（element）、輸出端口索引（outputs）等信息。\n\n詳細說明\n\n    重置項目列表：\n        查找節點中的項目容器（div.items）。\n        將容器內容設置為單個默認項目（div.item），包含：\n            空的文本輸入框（input.item-text）。\n            添加節點按鈕（button.add-node-btn）。\n            輸出端口（div.output-port），設置 data-type=\"output\"。\n    更新輸出索引：\n        重置 nodeData.outputs 為 [0]，表示僅一個輸出端口。\n    設置新項目事件：\n        查找新創建的項目元素（div.item）。\n        調用 setupAddNodeButton，為新項目的添加按鈕設置事件，傳遞項目元素（newItem）、節點數據（nodeData）、輸出索引（0）和容器（container）。\n        調用 setupOutputPort，為新項目的輸出端口設置事件，傳遞相同參數。\n    恢復段落輸入框：\n        查找節點中的段落容器（div.paragraph-container）。\n        若存在，創建新的段落輸入框（textarea.paragraph-input），設置類名和占位符（“貼上段落內容...”）。\n        用新輸入框取代段落容器。\n\n參數作用\n\n    nodeData：提供節點數據，用於訪問項目容器、更新輸出索引和恢復輸入框。\n\n依賴的外部變數/函數\n\n    container (HTMLElement)：全局主容器元素，用於設置事件。\n    setupAddNodeButton (Function)：為添加節點按鈕設置事件的函數。\n    setupOutputPort (Function)：為輸出端口設置事件的函數。\n\n總結\n\nresetItemsList 函數重置節點的項目列表為單個默認項目，同步更新輸出端口索引，並恢復段落輸入框，適用於清除或重置節點內容的場景（如鍵盤清除事件）。與 setupAddNodeButton 和 setupOutputPort 配合，確保新項目的交互功能完整。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 192,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 83,
+      "x": 1882.622518875583,
+      "y": -358.47067370826556,
+      "title": "setupAddNodeButton",
+      "content": "function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });\n}",
+      "description": "extractCalledFunctions\n功能\n\n從給定的程式碼內容中提取被調用的函數名稱，排除指定的函數名稱和黑名單中的函數。\n參數\n\n    content (String)：包含程式碼的字符串，用於查找函數調用。\n    functionNameToExclude (String)：需要排除的函數名稱（如自身函數名稱）。\n\n詳細說明\n\n    使用正則表達式 /([a-zA-Z_$][0-9a-zA-Z_$]*)\\s*\\([^)]*\\)/g 匹配函數調用：\n        ([a-zA-Z_$][0-9a-zA-Z_$]*)：捕獲函數名稱，以字母、底線或美元符號開頭。\n        \\s*\\([^)]*\\)：匹配函數調用的小括號及其參數，允許空格。\n        /g：全局匹配，查找所有符合條件的調用。\n    創建 Set 對象（functionNames）儲存唯一的函數名稱。\n    遍歷所有匹配項，提取調用函數名稱（calledFunctionName）。\n    檢查函數名稱是否不在黑名單（FUNCTION_BLACKLIST）中且不等於要排除的名稱（functionNameToExclude），若滿足條件則添加到 functionNames。\n    將 functionNames 轉換為數組並返回。\n\n參數作用\n\n    content：提供待解析的程式碼內容，用於提取函數調用。\n    functionNameToExclude：指定要排除的函數名稱，防止自引用或無關函數被包含。\n\n依賴的外部變數\n\n    FUNCTION_BLACKLIST (Array)：全局黑名單數組，包含不應提取的函數名稱。",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 715,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 84,
+      "x": 1883.448965156575,
+      "y": -87.34381420413266,
+      "title": "setupOutputPort",
+      "content": "function setupOutputPort(itemElement, nodeData, outputIndex, container) {\n  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {\n    if (spacePressed || e.button === 1) return;\n\n    const rect = e.target.getBoundingClientRect();\n    connecting = {\n      startX: rect.left + rect.width / 2,\n      startY: rect.top + rect.height / 2,\n      fromNode: nodeData.id,\n      fromOutput: outputIndex\n    };\n    container.classList.add('connecting');\n    e.stopPropagation();\n  });\n}",
+      "description": "setupOutputPort（重複）\n功能\n\n為輸出端口設置鼠標按下事件，啟動連線操作。\n參數\n\n    itemElement (HTMLElement)：項目元素。\n    nodeData (Object)：節點數據對象。\n    outputIndex (Number)：輸出端口索引。\n    container (HTMLElement)：主容器元素。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 501,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 85,
+      "x": 1880.6960725945914,
+      "y": 122.37395439090847,
+      "title": "drawConnections",
+      "content": "function drawConnections() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置變換\n\n    connections.forEach(conn => {\n      const fromNode = nodes[conn.fromNode];\n      const toNode = nodes[conn.toNode];\n\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[conn.fromOutput];\n      const toPort = toNode.element.querySelector('.input-port');\n\n      const fromRect = fromPort.getBoundingClientRect();\n      const toRect = toPort.getBoundingClientRect();\n\n      const containerRect = container.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - containerRect.left;\n      const startY = fromRect.top + fromRect.height / 2 - containerRect.top;\n      const endX = toRect.left + toRect.width / 2 - containerRect.left;\n      const endY = toRect.top + toRect.height / 2 - containerRect.top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.bezierCurveTo(\n      startX + 100, startY,\n      endX - 100, endY,\n      endX, endY\n      );\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2;\n      ctx.stroke();\n    });\n\n    // 處理連接中的線條\n    if (connecting) {\n      const fromNode = nodes[connecting.fromNode];\n      const fromPort = fromNode.element.querySelectorAll('.output-port')[connecting.fromOutput];\n      const fromRect = fromPort.getBoundingClientRect();\n\n      const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;\n      const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;\n      const endX = connecting.currentX - container.getBoundingClientRect().left;\n      const endY = connecting.currentY - container.getBoundingClientRect().top;\n\n      ctx.beginPath();\n      ctx.moveTo(startX, startY);\n      ctx.lineTo(endX, endY);\n      ctx.strokeStyle = '#888';\n      ctx.lineWidth = 2 * (1/scale);\n      ctx.stroke();\n    }\n  }",
+      "description": "drawConnections（重複）\n功能\n\n繪製節點間連線（貝塞尔曲線）和臨時連線（直線）。\n參數\n\n無直接參數，依賴全局變數（如 ctx, canvas, nodes, connections, connecting, scale）。\n詳細說明\n\n    與先前分析一致，清除畫布並繪製連線。",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 1917,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 86,
+      "x": 943.9862271074385,
+      "y": 1665.4196836363642,
+      "title": "document 節點",
+      "content": "// 點擊外部關閉\n  document.addEventListener('click', (e) => {\n    if (popupContainer && !popupContainer.contains(e.target)) {  // 這裡缺少右括號\n      popupContainer.remove();\n      popupContainer = null;\n      activePopup = null;\n    }\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 229,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 87,
+      "x": 943.9862271074385,
+      "y": 1879.0560472727277,
+      "title": "btn 節點",
+      "content": "btn.addEventListener('click', (e) => {\n    if (popupContainer && document.body.contains(popupContainer)) {\n      popupContainer.remove();\n    }\n\n    const btnRect = btn.getBoundingClientRect();\n    const btnCenterX = btnRect.left + btnRect.width / 2;\n    const btnCenterY = btnRect.top + btnRect.height / 2;\n\n    const worldX = (btnCenterX - translateX) / scale;\n    const worldY = (btnCenterY - translateY) / scale;\n\n    const popupWidth = 600;\n    const popupHeight = 200;\n\n    popupContainer = document.createElement('div');\n    popupContainer.style.position = 'fixed';\n    popupContainer.style.left = '0';\n    popupContainer.style.top = '0';\n  popupContainer.style.width = `${popupWidth}px`;\n  popupContainer.style.height = `${popupHeight}px`;\n    popupContainer.style.transform = `\n  translate(${worldX * scale + translateX - popupWidth/2}px,\n  ${worldY * scale + translateY - popupHeight/2}px)\n    `;\n    popupContainer.style.zIndex = '10000';\n    popup.style.zIndex = '10000';\n\n    popup.style.display = 'block';\n    popup.style.position = 'absolute';\n    popup.style.width = '100%';\n    popup.style.height = '100%';\n    popup.style.overflow = 'auto';\n    popupContainer.appendChild(popup);\n\n    document.body.appendChild(popupContainer);\n\n    // 設置為當前活動彈出框\n    activePopup = popup;\n    popupScrollPosition = 0;\n    updatePopupScroll();\n\n    e.stopPropagation();\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "updatePopupScroll"
+      ],
+      "metadata": {
+        "contentLength": 1375,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 88,
+      "x": 942.8862271074383,
+      "y": 2080.592410909093,
+      "title": "jumpBtn 節點",
+      "content": "jumpBtn.addEventListener('click', (e) => {\n    jumpToSameNameNode(nodeData);\n    e.stopPropagation();\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "jumpToSameNameNode"
+      ],
+      "metadata": {
+        "contentLength": 107,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 89,
+      "x": 942.8862271074383,
+      "y": 2279.928774545454,
+      "title": "copyBtn 節點",
+      "content": "// 添加COPY按鈕點擊事件\n  copyBtn.addEventListener('click', (e) => {\n    e.stopPropagation();\n    try {\n      navigator.clipboard.writeText(popup.textContent)\n      .then(() => {\n        copyBtn.textContent = '已複製!';\n        setTimeout(() => {\n          copyBtn.textContent = '';\n        }, 2000);\n      })\n      .catch(err => {\n        console.error('複製失敗:', err);\n        copyBtn.textContent = '複製失敗';\n        setTimeout(() => {\n          copyBtn.textContent = '';\n        }, 2000);\n      });\n    } catch (err) {\n      console.error('複製失敗:', err);\n      copyBtn.textContent = '複製失敗';\n      setTimeout(() => {\n        copyBtn.textContent = '';\n      }, 2000);\n    }\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 664,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 90,
+      "x": 943.9862271074385,
+      "y": 2519.9651381818185,
+      "title": "node 節點",
+      "content": "node.querySelector('.delete-node-btn').addEventListener('click', (e) => {\n    // 移除所有與該節點相關的連接\n    connections = connections.filter(conn =>\n    conn.fromNode !== nodeData.id && conn.toNode !== nodeData.id\n    );\n\n    // 重新索引節點ID\n    nodes = nodes.filter(n => n.id !== nodeData.id);\n    nodes.forEach((n, index) => {\n      n.id = index; // 重新分配連續的ID\n    });\n\n    // 更新連接中的節點ID引用\n    connections.forEach(conn => {\n      if (conn.fromNode > nodeData.id) conn.fromNode--;\n      if (conn.toNode > nodeData.id) conn.toNode--;\n    });\n\n    node.remove();\n    drawConnections();\n    updateSameNameHighlights(); // 刪除後更新高亮\n    e.stopPropagation();\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "drawConnections",
+        "updateSameNameHighlights"
+      ],
+      "metadata": {
+        "contentLength": 644,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 91,
+      "x": 936.7262271074386,
+      "y": 3360.49150181818,
+      "title": "item 節點",
+      "content": "item.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    handleAddNodeClick(nodeData, outputIndex, e);\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "handleAddNodeClick"
+      ],
+      "metadata": {
+        "contentLength": 126,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 92,
+      "x": 926.8262271074386,
+      "y": 3565.3278654545443,
+      "title": "container 節點",
+      "content": "// 点击空白处取消选择\n  container.addEventListener('click', (e) => {\n    if (e.target === container && selectedNodes.size > 0) {\n      clearSelection();\n    }\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "clearSelection"
+      ],
+      "metadata": {
+        "contentLength": 155,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 93,
+      "x": 921.3262271074386,
+      "y": 3770.1642290909076,
+      "title": "link 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 94,
+      "x": 942.5845452892562,
+      "y": 1472.7755836363626,
+      "title": "document 節點",
+      "content": "document.addEventListener('click', (e) => {\n    if (popupContainer && !popupContainer.contains(e.target)) {  // 這裡缺少右括號\n      popupContainer.remove();\n      popupContainer = null;\n      activePopup = null;\n    }\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 217,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 95,
+      "x": 941.8046452892563,
+      "y": 2747.7316836363643,
+      "title": "node 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "handleAddNodeClick"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 96,
+      "x": 940.8046452892565,
+      "y": 2941.0016836363666,
+      "title": "node 節點",
+      "content": "",
+      "description": "",
+      "isConvertedToButton": false,
+      "items": [
+        "addNewItem"
+      ],
+      "metadata": {
+        "contentLength": 0,
+        "lastUpdated": "2025-06-25T05:47:37.520Z"
+      }
+    },
+    {
+      "id": 97,
+      "x": 939.6046452892565,
+      "y": 3127.2316836363652,
+      "title": "node 節點",
+      "content": "node.querySelector('.generate-btn').addEventListener('click', () => {\n    // 獲取所有項目\n    const items = node.querySelectorAll('.item');\n    \n    // 計算基礎位置\n    const baseX = nodeData.x + 200 / scale;\n    let baseY = nodeData.y;\n    \n    // 為每個項目創建子節點\n    items.forEach((item, index) => {\n      const itemText = item.querySelector('.item-text').value;\n      \n      // 創建新節點\n      const newNode = createNode(\n        baseX,\n        baseY,\n        itemText + ' 節點'\n      );\n      \n      // 添加連接\n      connections.push({\n        fromNode: nodeData.id,\n        fromOutput: index,\n        toNode: newNode.id\n      });\n      \n      // 更新下一個節點的Y位置\n      baseY += 235 / scale;\n    });\n    \n    drawConnections();\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 706,
+        "lastUpdated": "2025-06-25T05:47:37.521Z"
+      }
+    },
+    {
+      "id": 98,
+      "x": 919.9574634710748,
+      "y": 3995.7093200000018,
+      "title": "cancelBtn 節點",
+      "content": "// 取消按鈕點擊事件\n  cancelBtn.addEventListener('click', () => {\n    document.body.removeChild(dialog);\n    callback(null);\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 122,
+        "lastUpdated": "2025-06-25T05:47:37.521Z"
+      }
+    },
+    {
+      "id": 99,
+      "x": 924.6847361983475,
+      "y": 4191.98204727273,
+      "title": "confirmBtn 節點",
+      "content": "// 確認按鈕點擊事件\n  confirmBtn.addEventListener('click', () => {\n    const newContent = textarea.value.trim();\n    document.body.removeChild(dialog);\n    callback(newContent);\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "項目 1"
+      ],
+      "metadata": {
+        "contentLength": 175,
+        "lastUpdated": "2025-06-25T05:47:37.521Z"
+      }
+    },
+    {
+      "id": 100,
+      "x": 921.4702816528928,
+      "y": 4394.15013818182,
+      "title": "itemElement 節點",
+      "content": "itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {\n    const name = itemElement.querySelector('.item-text').value;\n\n    const childNodes = connections.filter(conn =>\n    conn.fromNode === nodeData.id &&\n    conn.fromOutput === outputIndex\n    ).length;\n\n    const baseX = nodeData.x + 200 / scale;\n    const baseY = nodeData.y + (childNodes * 120 / scale);\n\n    const newNode = createNode(\n    baseX,\n    baseY,\n    name + ' 節點'\n    );\n\n    connections.push( {\n      fromNode: nodeData.id,\n      fromOutput: outputIndex,\n      toNode: newNode.id\n    });\n    drawConnections();\n    e.stopPropagation();\n  });",
+      "description": "",
+      "isConvertedToButton": true,
+      "items": [
+        "createNode",
+        "drawConnections"
+      ],
+      "metadata": {
+        "contentLength": 634,
+        "lastUpdated": "2025-06-25T05:47:37.521Z"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromNode": 0,
+      "fromOutput": 0,
+      "toNode": 1
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 1,
+      "toNode": 2
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 2,
+      "toNode": 3
+    },
+    {
+      "fromNode": 0,
+      "fromOutput": 3,
+      "toNode": 4
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 0,
+      "toNode": 5
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 1,
+      "toNode": 6
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 2,
+      "toNode": 7
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 3,
+      "toNode": 8
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 4,
+      "toNode": 9
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 5,
+      "toNode": 10
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 6,
+      "toNode": 11
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 7,
+      "toNode": 12
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 8,
+      "toNode": 13
+    },
+    {
+      "fromNode": 3,
+      "fromOutput": 9,
+      "toNode": 14
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 0,
+      "toNode": 15
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 1,
+      "toNode": 16
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 2,
+      "toNode": 17
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 3,
+      "toNode": 18
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 4,
+      "toNode": 19
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 5,
+      "toNode": 20
+    },
+    {
+      "fromNode": 2,
+      "fromOutput": 6,
+      "toNode": 21
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 0,
+      "toNode": 22
+    },
+    {
+      "fromNode": 15,
+      "fromOutput": 1,
+      "toNode": 23
+    },
+    {
+      "fromNode": 23,
+      "fromOutput": 0,
+      "toNode": 24
+    },
+    {
+      "fromNode": 23,
+      "fromOutput": 1,
+      "toNode": 25
+    },
+    {
+      "fromNode": 23,
+      "fromOutput": 2,
+      "toNode": 26
+    },
+    {
+      "fromNode": 23,
+      "fromOutput": 3,
+      "toNode": 27
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 0,
+      "toNode": 28
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 1,
+      "toNode": 29
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 2,
+      "toNode": 30
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 3,
+      "toNode": 31
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 4,
+      "toNode": 32
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 5,
+      "toNode": 33
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 6,
+      "toNode": 34
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 7,
+      "toNode": 35
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 8,
+      "toNode": 36
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 9,
+      "toNode": 37
+    },
+    {
+      "fromNode": 16,
+      "fromOutput": 10,
+      "toNode": 38
+    },
+    {
+      "fromNode": 29,
+      "fromOutput": 0,
+      "toNode": 39
+    },
+    {
+      "fromNode": 30,
+      "fromOutput": 0,
+      "toNode": 40
+    },
+    {
+      "fromNode": 30,
+      "fromOutput": 1,
+      "toNode": 41
+    },
+    {
+      "fromNode": 31,
+      "fromOutput": 0,
+      "toNode": 42
+    },
+    {
+      "fromNode": 31,
+      "fromOutput": 1,
+      "toNode": 43
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 0,
+      "toNode": 44
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 1,
+      "toNode": 45
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 2,
+      "toNode": 46
+    },
+    {
+      "fromNode": 32,
+      "fromOutput": 3,
+      "toNode": 47
+    },
+    {
+      "fromNode": 33,
+      "fromOutput": 0,
+      "toNode": 48
+    },
+    {
+      "fromNode": 34,
+      "fromOutput": 0,
+      "toNode": 49
+    },
+    {
+      "fromNode": 35,
+      "fromOutput": 0,
+      "toNode": 50
+    },
+    {
+      "fromNode": 36,
+      "fromOutput": 0,
+      "toNode": 51
+    },
+    {
+      "fromNode": 36,
+      "fromOutput": 1,
+      "toNode": 52
+    },
+    {
+      "fromNode": 37,
+      "fromOutput": 0,
+      "toNode": 53
+    },
+    {
+      "fromNode": 37,
+      "fromOutput": 1,
+      "toNode": 54
+    },
+    {
+      "fromNode": 39,
+      "fromOutput": 0,
+      "toNode": 55
+    },
+    {
+      "fromNode": 48,
+      "fromOutput": 0,
+      "toNode": 56
+    },
+    {
+      "fromNode": 48,
+      "fromOutput": 1,
+      "toNode": 57
+    },
+    {
+      "fromNode": 48,
+      "fromOutput": 2,
+      "toNode": 58
+    },
+    {
+      "fromNode": 48,
+      "fromOutput": 3,
+      "toNode": 59
+    },
+    {
+      "fromNode": 48,
+      "fromOutput": 4,
+      "toNode": 60
+    },
+    {
+      "fromNode": 49,
+      "fromOutput": 0,
+      "toNode": 61
+    },
+    {
+      "fromNode": 49,
+      "fromOutput": 1,
+      "toNode": 62
+    },
+    {
+      "fromNode": 50,
+      "fromOutput": 0,
+      "toNode": 63
+    },
+    {
+      "fromNode": 59,
+      "fromOutput": 0,
+      "toNode": 64
+    },
+    {
+      "fromNode": 59,
+      "fromOutput": 1,
+      "toNode": 65
+    },
+    {
+      "fromNode": 60,
+      "fromOutput": 0,
+      "toNode": 66
+    },
+    {
+      "fromNode": 60,
+      "fromOutput": 1,
+      "toNode": 67
+    },
+    {
+      "fromNode": 67,
+      "fromOutput": 0,
+      "toNode": 68
+    },
+    {
+      "fromNode": 67,
+      "fromOutput": 1,
+      "toNode": 69
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 0,
+      "toNode": 70
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 2,
+      "toNode": 71
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 3,
+      "toNode": 72
+    },
+    {
+      "fromNode": 70,
+      "fromOutput": 0,
+      "toNode": 73
+    },
+    {
+      "fromNode": 71,
+      "fromOutput": 0,
+      "toNode": 74
+    },
+    {
+      "fromNode": 71,
+      "fromOutput": 1,
+      "toNode": 75
+    },
+    {
+      "fromNode": 72,
+      "fromOutput": 0,
+      "toNode": 76
+    },
+    {
+      "fromNode": 72,
+      "fromOutput": 1,
+      "toNode": 77
+    },
+    {
+      "fromNode": 17,
+      "fromOutput": 1,
+      "toNode": 78
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 0,
+      "toNode": 79
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 1,
+      "toNode": 80
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 2,
+      "toNode": 81
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 3,
+      "toNode": 82
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 4,
+      "toNode": 83
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 5,
+      "toNode": 84
+    },
+    {
+      "fromNode": 78,
+      "fromOutput": 6,
+      "toNode": 85
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 0,
+      "toNode": 86
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 1,
+      "toNode": 87
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 2,
+      "toNode": 88
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 3,
+      "toNode": 89
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 4,
+      "toNode": 90
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 5,
+      "toNode": 91
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 6,
+      "toNode": 92
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 7,
+      "toNode": 93
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 0,
+      "toNode": 94
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 4,
+      "toNode": 95
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 4,
+      "toNode": 96
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 4,
+      "toNode": 97
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 8,
+      "toNode": 98
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 9,
+      "toNode": 99
+    },
+    {
+      "fromNode": 5,
+      "fromOutput": 10,
+      "toNode": 100
+    }
+  ],
+  "viewState": {
+    "scale": 1.0999999999999996,
+    "translateX": -520.14634900376,
+    "translateY": 2670.8461349315585
+  },
+  "savedAt": "2025-06-25T05:47:37.521Z"
+}
