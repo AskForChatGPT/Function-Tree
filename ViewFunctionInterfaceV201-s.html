@@ -1,0 +1,3859 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗黑節點編輯器</title>
+<style>
+body {
+  background: #1e1e1e;
+  color: #ffffff;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+#canvas-container {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: grab;
+}
+
+#canvas-container.panning {
+  cursor: grabbing;
+}
+
+#canvas-container.connecting, #canvas-container.selecting {
+  cursor: crosshair;
+}
+
+#transform-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+#nodes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}
+
+#toolbar {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: #2d2d2d;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+#left-panel {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 300px;
+  height: 100vh;
+  background: rgba(30, 30, 30, 0.9);
+  border-right: 1px solid #444;
+  padding: 10px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+#node-list-container h3 {
+  color: #fff;
+  margin-bottom: 15px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #555;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.node {
+  position: absolute;
+  background: rgba(45, 45, 45, 0.85);
+  border: 1px solid rgba(68, 68, 68, 0.5);
+  border-radius: 8px;
+  width: 200px;
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  transform-origin: 0 0;
+  transform: none !important;
+  backdrop-filter: blur(2px);
+
+}
+
+.node.transparent {
+  background: rgba(30, 30, 30, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.node.selected {
+  border: 2px solid #4a90e2;
+  box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+}
+
+.node.highlight {
+  box-shadow: 0 0 15px 5px rgba(255, 255, 0, 0.7);
+  transition: box-shadow 0.3s;
+}
+
+.node.highlight-same-name {
+  box-shadow: 0 0 15px 5px rgba(255, 204, 0, 0.7);
+  transition: box-shadow 0.3s;
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 5px;
+  z-index: 15;
+}
+
+.node-title,
+.item-text,
+.paragraph-input,
+.N-input {
+  background: rgba(58, 58, 58, 0.8) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(85, 85, 85, 0.5) !important;
+}
+
+.node-title {
+  order: 3;
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 14px;
+  border-radius: 4px;
+  margin: 0 5px;
+}
+
+.node-title:focus,
+.item-text:focus,
+.paragraph-input:focus {
+  outline: none;
+  border-color: #777 !important;
+}
+
+.input-port, .output-port {
+  background: #4CAF50;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  z-index: 30;
+  border: 2px solid #333;
+}
+
+.input-port {
+  background: #4CAF50;
+  margin-right: 5px;
+  order: 1;
+}
+
+.output-port {
+  background: #FF5722;
+  margin-left: 5px;
+}
+
+.input-port:hover, .output-port:hover {
+  background: #ffffff;
+  transform: scale(1.2);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+  background: #333;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.item-text {
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.paragraph-input, .N-input {
+  width: 95%;
+  min-height: 60px;
+  padding: 5px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.node-list-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(45, 45, 45, 0.7);
+  border-radius: 4px;
+}
+
+.node-list-name {
+  color: #fff;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.node-list-description {
+  width: 100%;
+  min-height: 60px;
+  background: #3a3a3a;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 5px;
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.add-node-btn, .toolbar-btn, .add-item-btn, .generate-btn, .update-btn {
+  background: #555;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.add-node-btn {
+  margin-right: 5px;
+  padding: 2px 8px;
+}
+
+.add-node-btn:hover, .toolbar-btn:hover, .add-item-btn:hover, .generate-btn:hover, .update-btn:hover {
+  background: #777;
+}
+
+.toolbar-btn {
+  padding: 8px 12px;
+  margin: 0 5px;
+}
+
+.add-item-btn {
+  padding: 5px 10px;
+  width: 80px;
+  margin-right: 5px;
+  text-align: center;
+}
+
+.generate-btn {
+  padding: 5px 10px;
+  width: 80px;
+  margin-left: 5px;
+  display: inline-block;
+  text-align: center;
+}
+
+.update-btn {
+  margin-left: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.delete-node-btn {
+  background: #ff4444;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  margin-left: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  order: 4;
+}
+
+.delete-node-btn:hover {
+  background: #ff6666;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255, 165, 0, 0.7);
+  border: none;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 1;
+}
+
+.copy-btn:hover {
+  background: rgba(255, 165, 0, 0.9);
+}
+
+.jump-to-btn {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  background: #ffcc00;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+  order: 2;
+}
+
+.jump-to-btn::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jump-to-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.jump-to-btn.hidden {
+  display: none;
+}
+
+.paragraph-btn {
+  width: 100%;
+  background: #4a4a4a;
+  border: 1px solid #555;
+  color: #aaa;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paragraph-popup-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2147483647;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.paragraph-popup-container > div:first-child {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.paragraph-popup {
+  position: relative;
+  background: rgba(45, 45, 45, 0.7);
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 10px;
+  max-width: 80vw;
+  max-height: 80vh;
+  overflow: auto;
+  z-index: 2147483647;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  white-space: pre-wrap;
+  font-family: monospace;
+  pointer-events: auto;
+  display: none;
+  backdrop-filter: blur(2px);
+}
+
+.paragraph-popup::after {
+  content: "按 X 清空內容";
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 10px;
+  color: #888;
+}
+
+.selection-box {
+  position: absolute;
+  background: rgba(100, 100, 255, 0.1);
+  border: 1px solid rgba(100, 100, 255, 0.8);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.update-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.update-dialog-content {
+  background-color: #333;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 600px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.update-dialog textarea {
+  width: 100%;
+  height: 200px;
+  background-color: #444;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.update-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gapSony Music Group, Inc. All rights reserved.
+  gap: 10px;
+}
+
+.update-dialog-buttons button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.update-dialog-confirm {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.update-dialog-cancel {
+  background-color: #f44336;
+  color: white;
+}
+
+.buttons-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  width: 100%;
+}
+
+#file-input {
+  display: none;
+}
+
+
+
+.node-title {
+  order: 3;
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 14px;
+  border-radius: 4px;
+  margin: 0 5px;
+  width: calc(100% - 50px); /* 收窄50px */
+}
+
+.item-text {
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 12px;
+  border-radius: 4px;
+  width: calc(100% - 50px); /* 收窄50px */
+}
+
+.input-port, .output-port {
+  width: 6px; /* 改为6x6 */
+  height: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  z-index: 30;
+  border: 2px solid #333;
+}
+
+.input-port {
+  background: #4CAF50;
+  margin-right: 5px;
+  order: 1;
+}
+
+.output-port {
+  background: #FF5722;
+  margin-left: 5px;
+}
+
+
+  .node.color-0 {
+    background: rgba(45, 45, 45, 0.85) !important;
+  }
+  .node.color-1 {
+    background: rgba(200, 225, 245, 0.38) !important; /* 乳白淺藍 */
+}
+.node.color-2 {
+    background: rgba(210, 235, 210, 0.38) !important; /* 乳白淺綠 */
+}
+.node.color-3 {
+    background: rgba(255, 220, 200, 0.38) !important; /* 乳白淺橙 */
+}
+.node.color-4 {
+    background: rgba(230, 210, 240, 0.38) !important; /* 乳白淺紫 */
+}
+.node.color-5 {
+    background: rgba(255, 240, 200, 0.38) !important; /* 乳白淺黃 */
+}
+  
+  /* 透明版本 */
+  .node.transparent.color-0 {
+    background: rgba(30, 30, 30, 0.5) !important;
+  }
+  .node.transparent.color-1 {
+    background: rgba(74, 144, 226, 0.5) !important;
+  }
+  .node.transparent.color-2 {
+    background: rgba(76, 175, 80, 0.5) !important;
+  }
+  .node.transparent.color-3 {
+    background: rgba(255, 87, 34, 0.5) !important;
+  }
+  .node.transparent.color-4 {
+    background: rgba(156, 39, 176, 0.5) !important;
+  }
+  .node.transparent.color-5 {
+    background: rgba(255, 193, 7, 0.5) !important;
+  }
+  
+  /* 彈出框顏色 */
+  .paragraph-popup.color-0 {
+    background: rgba(45, 45, 45, 0.7) !important;
+  }
+  .paragraph-popup.color-1 {
+    background: rgba(74, 144, 226, 0.3) !important;
+  }
+  .paragraph-popup.color-2 {
+    background: rgba(76, 175, 80, 0.3) !important;
+  }
+  .paragraph-popup.color-3 {
+    background: rgba(255, 87, 34, 0.3) !important;
+  }
+  .paragraph-popup.color-4 {
+    background: rgba(156, 39, 176, 0.3) !important;
+  }
+  .paragraph-popup.color-5 {
+    background: rgba(255, 193, 7, 0.3) !important;
+  }
+
+
+.node.collapsed {
+  width: auto !important;
+  min-width: 150px;
+  padding: 5px !important;
+  overflow: visible !important; /* 確保連接線可以顯示 */
+}
+
+.node.collapsed .node-header {
+  margin-bottom: 0 !important;
+}
+
+.node.collapsed .collapsible {
+  display: none !important;
+}
+
+.node.collapsed .output-port {
+  margin-left: 5px !important;
+  order: 5 !important;
+}
+
+#connection-canvas {
+  z-index: 0 !important;
+}
+
+.node.collapsed .header-port {
+  position: absolute;
+  right: 25px; /* 在刪除按鈕左側 */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: #FF5722;
+  border-radius: 50%;
+  border: 2px solid #333;
+  z-index: 30;
+}
+
+
+.node-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 5px;
+  z-index: 15;
+}
+
+.input-port {
+  order: 1;
+  background: #4CAF50;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  z-index: 30;
+  border: 2px solid #333;
+  margin-right: 5px;
+}
+
+.collapse-btn {
+  order: 2;
+  background: #555;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 20px;
+  margin-right: 5px;
+}
+
+.jump-to-btn {
+  order: 3;
+  position: relative;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  background: #ffcc00;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.node-title {
+  order: 4;
+  flex-grow: 1;
+  padding: 5px;
+  font-size: 14px;
+  border-radius: 4px;
+  margin: 0 5px;
+  width: calc(100% - 50px);
+}
+
+.delete-node-btn {
+  order: 5;
+  background: #ff4444;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  margin-left: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.header-port {
+  order: 6;
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background: #FF5722;
+  border-radius: 50%;
+  border: 2px solid #333;
+  z-index: 30;
+}
+
+
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+<button class="toolbar-btn" id="save-btn">保存</button>
+<button class="toolbar-btn" id="load-btn">載入</button>
+<button class="toolbar-btn" id="export-selected-btn">滙出框選NODE</button>
+<button class="toolbar-btn" id="import-selected-btn">滙入框選NODE</button>
+<input type="file" id="file-input" accept=".json">
+<input type="file" id="import-selected-input" accept=".json" style="display:none">
+</div>
+
+
+<div id="left-panel">
+  <div id="node-list-container">
+    <h3>可見節點</h3>
+    <div id="node-list"></div>
+  </div>
+</div>
+
+<div id="canvas-container">
+<canvas id="connection-canvas"></canvas>
+<div id="canvas-container">
+<div id="transform-container">
+<canvas id="connection-canvas"></canvas>
+<div id="nodes-container"></div>
+</div>
+</div>
+</div>
+<script>
+const container = document.getElementById('canvas-container');
+const nodesContainer = document.getElementById('nodes-container');
+const canvas = document.getElementById('connection-canvas');
+const ctx = canvas.getContext('2d');
+
+
+
+// 添加導出選中節點按鈕事件
+document.getElementById('export-selected-btn').addEventListener('click', exportSelectedNodes);
+document.getElementById('import-selected-btn').addEventListener('click', () => {
+  document.getElementById('import-selected-input').click();
+});
+document.getElementById('import-selected-input').addEventListener('change', importSelectedNodes);
+
+
+// 全局存储所有弹窗的集合
+const ALL_ACTIVE_POPUPS = new Set();
+
+
+// 在全局變量中添加
+const COLOR_CLASSES = ['color-0', 'color-1', 'color-2', 'color-3', 'color-4', 'color-5'];
+let currentColorIndex = 0;
+
+// 函數名稱黑名單
+const FUNCTION_BLACKLIST = [
+// Array methods
+'Array',
+'add',
+'Set',
+'splice',
+'join',
+
+'map',
+'filter',
+'find',
+'findIndex',
+'forEach',
+'from',
+'indexOf',
+'push',
+'remove',
+'slice',
+'some',
+'replaceChild',
+
+// Math functions
+'abs',
+'atan2',
+'ceil',
+'cos',
+'floor',
+'max',
+'min',
+'pow',
+'random',
+'round',
+'sin',
+'sqrt',
+
+// Timing functions
+'setTimeout',
+'requestAnimationFrame',
+'now',
+
+// Canvas 2D API
+'arc',
+'beginPath',
+'bezierCurveTo',
+'clearRect',
+'closePath',
+'createLinearGradient',
+'createRadialGradient',
+'addColorStop',
+'drawImage',
+'fill',
+'fillRect',
+'fillText',
+'lineTo',
+'moveTo',
+'restore',
+'save',
+'scale',
+'setLineDash',
+'setTransform',
+'stroke',
+'strokeRect',
+'translate',
+
+// DOM manipulation
+'addEventListener',
+'appendChild',
+'contains',
+'createElement',
+'getElementById',
+'insertBefore',
+'querySelector',
+'querySelectorAll',
+'removeChild',
+'removeEventListener',
+'replaceWith',
+'substring',
+'setAttribute',
+'removeAttribute',
+'sort',
+'parseFloat',
+
+'next',
+'values',
+
+
+
+
+
+// Object methods
+'assign',
+'clear',
+'reduce',
+'delete',
+'entries',
+'keys',
+'toString',
+
+// Events
+'preventDefault',
+'stopPropagation',
+
+// Other Web APIs
+'FileReader',
+'readAsText',
+'writeText',
+
+// Promise/async
+'catch',
+'then',
+
+'focus',
+'callback',
+
+
+'Date',
+'toISOString',
+'stringify',
+'Blob',
+'createObjectURL',
+'createDocumentFragment',
+ 
+'replace',
+'click',
+'revokeObjectURL',
+'alert',
+'then',
+
+'Map',
+'set',
+'get',
+'split',
+'isArray',
+'addArc',
+'padStart',
+
+'parseInt',
+
+
+'toggle',
+'play',
+'pause',
+'paused',
+'clearTimeout',
+'formatTime',
+
+
+
+'new',
+'createOscillator',
+'createGain',
+'setValueAtTime',
+'connect',
+'start',
+'stop',
+'has',
+'test',
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Utility functions
+'getBoundingClientRect',
+'getRandomFluorescentColor',
+'isNaN',
+'lightenColor',
+'parse',
+'rgba',
+'showStatusMessage',
+'toFixed',
+'warn',
+
+// Language constructs
+'function',
+'if',
+'for',
+'while',
+'switch',
+'return',
+'trim',
+'match',
+
+
+
+
+// Console
+'console.log',
+'log',
+'error'
+];
+
+let nodes = [];
+let connections = [];
+let draggingNode = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let connecting = null;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+let scale = 1;
+let translateX = 0;
+let translateY = 0;
+let spacePressed = false;
+// 新增全局變量來追蹤當前活動的彈出框
+let activePopup = null;
+let popupScrollPosition = 0;
+// 在全局变量中添加
+let dragStartWorldX = 0;
+let dragStartWorldY = 0;
+
+
+// 新增全局变量
+let selectionBox = null;
+let isSelecting = false;
+let selectionStartX = 0;
+let selectionStartY = 0;
+let selectedNodes = new Set();
+let shiftPressed = false; // 新增這行到其他全局變量附近
+
+
+// 在全局變量中添加
+let nodeDescriptions = {}; // 存儲節點描述
+let lastVisibleNodes = []; // 記錄上次可見的節點
+
+
+// 新增變量
+const transformContainer = document.getElementById('transform-container');
+let lastScale = 1;
+document.getElementById('save-btn').addEventListener('click', saveProject);
+document.getElementById('load-btn').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', loadProject);
+
+
+
+// 保存項目
+function saveProject() {
+  try {
+    const nodesData = nodes.map(node => {
+      const element = node.element;
+
+      // 獲取段落內容（無論當前顯示的是輸入框還是按鈕）
+      let content = '';
+      const inputField = element.querySelector('.paragraph-input');
+      const contentBtn = element.querySelector('.paragraph-btn');
+      const popup = element.querySelector('.paragraph-popup');
+
+      if (contentBtn && popup) {
+        // 如果已轉換為按鈕，從彈出框或按鈕的data屬性獲取原始內容
+        content = popup.textContent || contentBtn.dataset.originalContent || '';
+      } else if (inputField) {
+        // 如果還是輸入框狀態，直接獲取值
+        content = inputField.value;
+      }
+
+      return {
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        colorIndex: node.colorIndex || 0,
+        title: element.querySelector('.node-title').value || '未命名節點',
+        content: content,
+        description: nodeDescriptions[node.id] || '',
+        isConvertedToButton: !!contentBtn, // 記錄是否已轉換
+        items: Array.from(element.querySelectorAll('.item-text')).map(item => item.value),
+        metadata: {
+          contentLength: content.length,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    });
+
+    // 准备连接数据
+    const connectionsData = connections.map(conn => ( {
+      fromNode: conn.fromNode,
+      fromOutput: conn.fromOutput || 0,
+      toNode: conn.toNode
+    }));
+
+    // 创建完整项目数据
+    const projectData = {
+      version: '2.0', // 版本号
+      nodes: nodesData,
+      connections: connectionsData,
+      viewState: {
+        scale,
+        translateX,
+        translateY
+      },
+      savedAt: new Date().toISOString()
+    };
+
+    // 生成下载文件
+    const dataStr = JSON.stringify(projectData, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+  const filename = `node-project-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+  } catch (error) {
+    console.error('保存失败:', error);
+  alert(`保存错误: ${error.message}`);
+  }
+}
+// 載入項目
+// 載入項目
+function loadProject(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const projectData = JSON.parse(e.target.result);
+
+      // 清除現有數據
+      nodesContainer.innerHTML = '';
+      nodes = [];
+      connections = [];
+
+      // 恢復視圖狀態
+      if (projectData.viewState) {
+        scale = projectData.viewState.scale || 1;
+        translateX = projectData.viewState.translateX || window.innerWidth / 2 - 100;
+        translateY = projectData.viewState.translateY || window.innerHeight / 2 - 50;
+        applyTransform();
+      }
+
+      // 恢復節點
+      const nodeMap = {};
+      projectData.nodes?.forEach(nodeData => {
+        if (nodeData.description) {
+          nodeDescriptions[nodeData.id] = nodeData.description;
+        }
+        const newNode = createNode(nodeData.x, nodeData.y, nodeData.title || '節點');
+        nodeMap[nodeData.id] = newNode;
+
+        // 恢復節點顏色 - 先移除所有顏色類再添加正確的
+const colorClass = COLOR_CLASSES[nodeData.colorIndex % COLOR_CLASSES.length];
+newNode.element.classList.add(colorClass);
+newNode.colorIndex = nodeData.colorIndex;
+        newNode.colorIndex = nodeData.colorIndex; // 確保保存顏色索引
+
+        // 恢復段落內容
+        const paragraphInput = newNode.element.querySelector('.paragraph-input');
+        if (paragraphInput && nodeData.content !== undefined) {
+          paragraphInput.value = nodeData.content;
+
+if (nodeData.isConvertedToButton && nodeData.content.trim()) {
+    // 創建按鈕容器
+    const btn = document.createElement('button');
+    btn.className = 'paragraph-btn';
+    btn.textContent = nodeData.content.length > 50
+        ? nodeData.content.substring(0, 47) + '...'
+        : nodeData.content;
+    btn.dataset.originalContent = nodeData.content;
+
+    // 創建彈出框
+    const popup = document.createElement('div');
+    popup.className = 'paragraph-popup';
+    popup.textContent = nodeData.content;
+    
+    // 創建容器
+    const container = document.createElement('div');
+    container.style.position = 'relative';
+    container.style.display = 'inline-block';
+    container.style.width = '100%';
+
+    // 保存原始輸入框
+    const originalInput = paragraphInput.cloneNode(true);
+    originalInput.style.display = 'none';
+    container.appendChild(originalInput);
+
+    container.appendChild(btn);
+    container.appendChild(popup);
+
+    // 替換輸入框
+    paragraphInput.replaceWith(container);
+
+    // 設置按鈕事件 - 使用 V193 的新方式
+    setupParagraphButtonEvents(btn, popup, originalInput, newNode);
+    
+    // 確保彈出框狀態正確初始化
+    newNode.popupContainer = null;
+    activePopup = null;
+     popup.classList.add(colorClass); // 添加這行
+}
+        }
+
+        // 恢復項目列表
+        const itemsContainer = newNode.element.querySelector('.items');
+        if (itemsContainer && nodeData.items) {
+          itemsContainer.innerHTML = '';
+          newNode.outputs = []; // 重置 outputs 數組
+
+          nodeData.items.forEach((itemText, index) => {
+            const newItem = document.createElement('div');
+            newItem.className = 'item';
+            newItem.innerHTML = `
+              <input type="text" class="item-text" value="${escapeHtml(itemText || '項目 ' + (index + 1))}">
+              <button class="add-node-btn">+</button>
+              <div class="output-port" data-type="output"></div>
+            `;
+            itemsContainer.appendChild(newItem);
+
+            newNode.outputs.push(index); // 確保 outputs 數組正確更新
+            setupAddNodeButton(newItem, newNode, index, container);
+            setupOutputPort(newItem, newNode, index, container);
+          });
+        }
+      });
+
+      // 恢復連接
+      projectData.connections?.forEach(conn => {
+        if (nodeMap[conn.fromNode] && nodeMap[conn.toNode]) {
+          connections.push({
+            fromNode: nodeMap[conn.fromNode].id,
+            fromOutput: conn.fromOutput || 0,
+            toNode: nodeMap[conn.toNode].id
+          });
+        }
+      });
+
+      drawConnections();
+      showStatusMessage('項目載入完成', 'success');
+    } catch (error) {
+      console.error('載入失敗:', error);
+      showStatusMessage('載入失敗，請檢查文件格式', 'error');
+    }
+  };
+
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+
+
+// 導出選中節點函數
+function exportSelectedNodes() {
+  if (selectedNodes.size === 0) {
+    showStatusMessage('請先選擇要導出的節點', 'warning');
+    return;
+  }
+
+  try {
+    // 只導出選中的節點，不包含子節點
+    const nodesToExport = Array.from(selectedNodes);
+
+    // 準備節點數據
+    const nodesData = nodesToExport.map(nodeId => {
+      const node = nodes[nodeId];
+      const element = node.element;
+
+      // 獲取段落內容
+      let content = '';
+      const inputField = element.querySelector('.paragraph-input');
+      const contentBtn = element.querySelector('.paragraph-btn');
+      const popup = element.querySelector('.paragraph-popup');
+
+      if (contentBtn && popup) {
+        content = popup.textContent || contentBtn.dataset.originalContent || '';
+      } else if (inputField) {
+        content = inputField.value;
+      }
+
+      return {
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        colorIndex: node.colorIndex || 0,
+        title: element.querySelector('.node-title').value || '未命名節點',
+        content: content,
+        description: nodeDescriptions[node.id] || '',
+        isConvertedToButton: !!contentBtn,
+        items: Array.from(element.querySelectorAll('.item-text')).map(item => item.value),
+        metadata: {
+          contentLength: content.length,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    });
+
+    // 準備連接數據（僅包含導出節點之間的連接）
+// 準備連接數據（僅包含導出節點之間的連接）
+const connectionsData = connections
+  .filter(conn => {
+    return selectedNodes.has(conn.fromNode) && selectedNodes.has(conn.toNode);
+  })
+  .map(conn => ({
+    fromNode: conn.fromNode,
+    fromOutput: conn.fromOutput || 0,
+    toNode: conn.toNode
+  }));
+
+    // 創建導出數據
+    const exportData = {
+      version: '2.0',
+      nodes: nodesData,
+      connections: connectionsData,
+      exportedAt: new Date().toISOString()
+    };
+
+    // 生成下載文件
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const filename = `selected-nodes-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+    showStatusMessage(`已導出 ${nodesToExport.length} 個選中節點`, 'success');
+  } catch (error) {
+    console.error('導出失敗:', error);
+    showStatusMessage(`導出錯誤: ${error.message}`, 'error');
+  }
+}
+// 導入選中節點函數
+function importSelectedNodes(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const importData = JSON.parse(e.target.result);
+      
+      if (!importData.nodes || !Array.isArray(importData.nodes)) {
+        throw new Error('無效的導入文件格式');
+      }
+
+      // 計算導入位置偏移量（當前視圖中心）
+      const centerX = toWorldX(window.innerWidth / 2);
+      const centerY = toWorldY(window.innerHeight / 2);
+      
+      // 計算原始節點群的中心點
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      importData.nodes.forEach(node => {
+        minX = Math.min(minX, node.x);
+        minY = Math.min(minY, node.y);
+        maxX = Math.max(maxX, node.x);
+        maxY = Math.max(maxY, node.y);
+      });
+      const originalCenterX = (minX + maxX) / 2;
+      const originalCenterY = (minY + maxY) / 2;
+      
+      // 計算偏移量
+      const offsetX = centerX - originalCenterX;
+      const offsetY = centerY - originalCenterY;
+
+      // 創建ID映射表（舊ID -> 新ID）
+      const idMap = {};
+      let maxId = Math.max(...nodes.map(n => n.id), -1) + 1;
+
+      // 導入節點
+      importData.nodes.forEach(nodeData => {
+        const newNode = createNode(
+          nodeData.x + offsetX,
+          nodeData.y + offsetY,
+          nodeData.title || '節點'
+        );
+        
+        // 記錄ID映射
+        idMap[nodeData.id] = newNode.id;
+        
+        // 設置節點顏色
+        if (nodeData.colorIndex !== undefined) {
+          changeNodeColor(newNode, nodeData.colorIndex);
+        }
+        
+        // 設置節點描述
+        if (nodeData.description) {
+          nodeDescriptions[newNode.id] = nodeData.description;
+        }
+
+        // 恢復段落內容
+        const paragraphInput = newNode.element.querySelector('.paragraph-input');
+        if (paragraphInput && nodeData.content !== undefined) {
+          paragraphInput.value = nodeData.content;
+
+          if (nodeData.isConvertedToButton && nodeData.content.trim()) {
+            // 創建按鈕容器
+            const btn = document.createElement('button');
+            btn.className = 'paragraph-btn';
+            btn.textContent = nodeData.content.length > 50
+              ? nodeData.content.substring(0, 47) + '...'
+              : nodeData.content;
+            btn.dataset.originalContent = nodeData.content;
+
+            // 創建彈出框
+            const popup = document.createElement('div');
+            popup.className = 'paragraph-popup';
+            popup.textContent = nodeData.content;
+            
+            // 創建容器
+            const container = document.createElement('div');
+            container.style.position = 'relative';
+            container.style.display = 'inline-block';
+            container.style.width = '100%';
+
+            // 保存原始輸入框
+            const originalInput = paragraphInput.cloneNode(true);
+            originalInput.style.display = 'none';
+            container.appendChild(originalInput);
+
+            container.appendChild(btn);
+            container.appendChild(popup);
+
+            // 替換輸入框
+            paragraphInput.replaceWith(container);
+
+            // 設置按鈕事件
+            setupParagraphButtonEvents(btn, popup, originalInput, newNode);
+            
+            // 確保彈出框狀態正確初始化
+            newNode.popupContainer = null;
+            activePopup = null;
+            popup.classList.add(COLOR_CLASSES[nodeData.colorIndex % COLOR_CLASSES.length]);
+          }
+        }
+
+        // 恢復項目列表
+        const itemsContainer = newNode.element.querySelector('.items');
+        if (itemsContainer && nodeData.items) {
+          itemsContainer.innerHTML = '';
+          newNode.outputs = []; // 重置 outputs 數組
+
+          nodeData.items.forEach((itemText, index) => {
+            const newItem = document.createElement('div');
+            newItem.className = 'item';
+            newItem.innerHTML = `
+              <input type="text" class="item-text" value="${escapeHtml(itemText || '項目 ' + (index + 1))}">
+              <button class="add-node-btn">+</button>
+              <div class="output-port" data-type="output"></div>
+            `;
+            itemsContainer.appendChild(newItem);
+
+            newNode.outputs.push(index); // 確保 outputs 數組正確更新
+            setupAddNodeButton(newItem, newNode, index, container);
+            setupOutputPort(newItem, newNode, index, container);
+          });
+        }
+      });
+
+      // 導入連接（使用新的ID，但不連接現有節點）
+      if (Array.isArray(importData.connections)) {
+        importData.connections.forEach(conn => {
+          if (idMap[conn.fromNode] !== undefined && idMap[conn.toNode] !== undefined) {
+            connections.push({
+              fromNode: idMap[conn.fromNode],
+              fromOutput: conn.fromOutput || 0,
+              toNode: idMap[conn.toNode]
+            });
+          }
+        });
+      }
+
+      drawConnections();
+      updateNodeList();
+      showStatusMessage(`已導入 ${importData.nodes.length} 個節點`, 'success');
+    } catch (error) {
+      console.error('導入失敗:', error);
+      showStatusMessage('導入失敗，請檢查文件格式', 'error');
+    }
+  };
+
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+
+
+function arrangePopups() {
+  const popups = Array.from(ALL_ACTIVE_POPUPS);
+  if (popups.length === 0) return;
+
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  const margin = 10;
+
+  // 统一尺寸配置
+  const uniformSize = {
+  small: { width: Math.min(350, screenWidth * 0.4), height: Math.min(250, screenHeight * 0.35) },
+  medium: { width: Math.min(400, screenWidth * 0.5), height: Math.min(300, screenHeight * 0.45) }
+  };
+
+  // 1. 设置弹窗尺寸
+  popups.forEach((popup, index) => {
+    if (index >= 5) { // 第6个开始
+    popup.style.width = `${uniformSize.small.width}px`;
+    popup.style.height = `${uniformSize.small.height}px`;
+    } else if (index >= 3) { // 第4-5个
+    popup.style.width = `${uniformSize.medium.width}px`;
+    popup.style.height = `${uniformSize.medium.height}px`;
+    } else { // 前3个
+    popup.style.maxWidth = `${screenWidth * 0.8}px`;
+    popup.style.maxHeight = `${screenHeight * 0.8}px`;
+      popup.style.width = '';
+      popup.style.height = '';
+    }
+    popup.style.display = 'block';
+  });
+
+  // 2. 处理1-3个弹窗（宽度自适应）
+  if (popups.length <= 3) {
+    const firstThree = popups.slice(0, 3);
+    adjustWidths(firstThree, margin, screenWidth);
+    arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);
+    return;
+  }
+
+  // 排列前3个（带宽度自适应）
+  const firstThree = popups.slice(0, 3);
+  adjustWidths(firstThree, margin, screenWidth);
+  arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);
+
+  // 3. 处理第4-5个弹窗（新增高度居中逻辑）
+  if (popups.length >= 4) {
+    // 计算各列高度
+    const colHeights = firstThree.map(popup =>
+    parseFloat(popup.style.top) + popup.getBoundingClientRect().height
+    );
+
+    // 找出最短和中间高度的列
+    const sortedIndices = [...colHeights]
+  .map((h, i) => ({h, i}))
+    .sort((a, b) => a.h - b.h)
+    .map(obj => obj.i);
+
+    const shortestCol = sortedIndices[0];
+    const middleCol = sortedIndices[1];
+
+    // 放置第4个在最短列下方
+    const fourthPopup = popups[3];
+    const fourthRect = fourthPopup.getBoundingClientRect();
+    let fourthY = colHeights[shortestCol] + margin;
+
+    // 放置第5个在中间高度列下方
+    const fifthPopup = popups.length >= 5 ? popups[4] : null;
+    const fifthRect = fifthPopup?.getBoundingClientRect();
+    let fifthY = colHeights[middleCol] + margin;
+
+    // 计算整体高度
+    const totalHeight = Math.max(
+    fourthY + fourthRect.height,
+    fifthY + (fifthRect?.height || 0)
+    );
+
+    // 尝试垂直居中
+    const centerOffset = Math.max(0, (screenHeight - totalHeight) / 2);
+
+    if (centerOffset > 0) {
+      // 有足够空间居中
+      firstThree.forEach(popup => {
+      popup.style.top = `${parseFloat(popup.style.top) + centerOffset}px`;
+      });
+
+    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;
+    fourthPopup.style.top = `${fourthY + centerOffset}px`;
+
+      if (fifthPopup) {
+      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;
+      fifthPopup.style.top = `${fifthY + centerOffset}px`;
+      }
+    } else {
+      // 需要缩放高度
+      const scaleFactor = screenHeight / totalHeight;
+
+      // 调整前3个高度
+      firstThree.forEach(popup => {
+        const rect = popup.getBoundingClientRect();
+      popup.style.height = `${rect.height * scaleFactor * 0.9}px`; // 保留10%边距
+      });
+
+      // 重新计算位置
+      arrangeGridLayout(firstThree, margin, screenWidth, screenHeight);
+      const newColHeights = firstThree.map(popup =>
+      parseFloat(popup.style.top) + popup.getBoundingClientRect().height
+      );
+
+      // 重新放置第4-5个
+    fourthPopup.style.left = `${parseFloat(firstThree[shortestCol].style.left)}px`;
+    fourthPopup.style.top = `${newColHeights[shortestCol] + margin}px`;
+
+      if (fifthPopup) {
+      fifthPopup.style.left = `${parseFloat(firstThree[middleCol].style.left)}px`;
+      fifthPopup.style.top = `${newColHeights[middleCol] + margin}px`;
+      }
+    }
+  }
+
+  // 4. 处理第6+个弹窗（左上角网格排列）
+  if (popups.length >= 6) {
+    let currentX = margin;
+    let currentY = margin;
+    let rowHeight = 0;
+
+    for (let i = 5; i < popups.length; i++) {
+      const popup = popups[i];
+      const rect = popup.getBoundingClientRect();
+
+      // 换行检查
+      if (currentX + rect.width > screenWidth) {
+        currentX = margin;
+        currentY += rowHeight + margin;
+        rowHeight = 0;
+      }
+
+      // 设置位置
+    popup.style.left = `${currentX}px`;
+    popup.style.top = `${currentY}px`;
+
+      // 更新参数
+      currentX += rect.width + margin;
+      rowHeight = Math.max(rowHeight, rect.height);
+
+      // 超出屏幕底部处理
+      if (currentY + rect.height > screenHeight) {
+        currentX = margin;
+        currentY = margin;
+      }
+    }
+  }
+}
+
+// 宽度自适应辅助函数
+function adjustWidths(popups, margin, screenWidth) {
+  let totalWidth = 0;
+  const originalWidths = [];
+
+  popups.forEach(popup => {
+    popup.style.width = '';
+    const rect = popup.getBoundingClientRect();
+    originalWidths.push(rect.width);
+    totalWidth += rect.width;
+  });
+
+  totalWidth += margin * (popups.length - 1);
+
+  if (totalWidth > screenWidth) {
+    const scaleFactor = (screenWidth - margin * (popups.length - 1)) /
+    (totalWidth - margin * (popups.length - 1));
+
+    popups.forEach((popup, i) => {
+    popup.style.width = `${originalWidths[i] * scaleFactor}px`;
+    });
+  }
+}
+// 原有的網格佈局函數
+function arrangeGridLayout(popups, margin, screenWidth, screenHeight) {
+  if (popups.length === 0) return;
+
+  // 計算所有彈出框的總面積和平均寬高
+  let totalWidth = 0;
+  let totalHeight = 0;
+  popups.forEach(popup => {
+    const rect = popup.getBoundingClientRect();
+    totalWidth += rect.width + margin;
+    totalHeight += rect.height + margin;
+  });
+
+  // 計算最接近正方形的行列分佈
+  const aspectRatio = screenWidth / screenHeight;
+  let cols = Math.ceil(Math.sqrt(popups.length * aspectRatio));
+  let rows = Math.ceil(popups.length / cols);
+
+  // 調整行列數以更貼近正方形
+  while (rows > cols && (rows - 1) * cols >= popups.length) {
+    rows--;
+    cols = Math.ceil(popups.length / rows);
+  }
+
+  // 計算每行列的最大寬高
+  const colWidths = new Array(cols).fill(0);
+  const rowHeights = new Array(rows).fill(0);
+  popups.forEach((popup, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const rect = popup.getBoundingClientRect();
+    colWidths[col] = Math.max(colWidths[col], rect.width);
+    rowHeights[row] = Math.max(rowHeights[row], rect.height);
+  });
+
+  // 計算總佈局寬高
+  const layoutWidth = colWidths.reduce((sum, width) => sum + width + margin, -margin);
+  const layoutHeight = rowHeights.reduce((sum, height) => sum + height + margin, -margin);
+
+  // 計算起始位置（居中）
+  const startX = (screenWidth - layoutWidth) / 2;
+  const startY = (screenHeight - layoutHeight) / 2;
+
+  // 設置每個彈出框的位置
+  const colPositions = [];
+  let currentX = startX;
+  for (let i = 0; i < cols; i++) {
+    colPositions.push(currentX);
+    currentX += colWidths[i] + margin;
+  }
+
+  const rowPositions = [];
+  let currentY = startY;
+  for (let i = 0; i < rows; i++) {
+    rowPositions.push(currentY);
+    currentY += rowHeights[i] + margin;
+  }
+
+  popups.forEach((popup, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const rect = popup.getBoundingClientRect();
+
+  popup.style.left = `${colPositions[col]}px`;
+  popup.style.top = `${rowPositions[row]}px`;
+  popup.style.width = `${rect.width}px`;
+  popup.style.height = `${rect.height}px`;
+  });
+}
+
+function setupParagraphButtonEvents(btn, popup, paragraphInput, nodeData) {
+  // 檢查必要的DOM元素是否存在
+  if (!btn || !btn.parentNode || !popup) {
+    console.error('無法設置按鈕事件：缺少必要的DOM元素');
+    return;
+  }
+
+  // 先克隆原始按鈕（保留原始按鈕不變）
+  const btnClone = btn.cloneNode(true);
+  
+  // 創建按鈕容器
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.alignItems = 'center';
+  buttonContainer.style.marginBottom = '10px';
+
+  // 創建並添加COPY和UPDATE按鈕
+  const copyBtn = createCopyButton();
+  const updateBtn = createUpdateButton();
+
+  // 先將克隆按鈕和更新按鈕添加到容器
+  buttonContainer.appendChild(btnClone);
+  buttonContainer.appendChild(updateBtn);
+
+  // 替換原始按鈕
+  try {
+    btn.parentNode.replaceChild(buttonContainer, btn);
+  } catch (error) {
+    console.error('替換按鈕失敗:', error);
+    return;
+  }
+
+  // 設置各種按鈕事件
+  setupCopyButtonEvents(copyBtn, popup);
+  setupUpdateButtonEvents(updateBtn, popup, nodeData);
+  
+  // 將COPY按鈕添加到彈出框
+  popup.appendChild(copyBtn);
+  
+  // 保存原始位置信息
+  const { originalParent, originalNextSibling, originalStyles } = saveOriginalPopupPosition(popup);
+  
+  // 設置彈出框切換事件（使用克隆按鈕）
+  setupPopupToggleEvents(btnClone, popup);
+  
+  // 設置全局事件處理器
+  setupGlobalEventHandlers(popup, originalParent, originalNextSibling, originalStyles, paragraphInput, nodeData);
+  
+  // 返回克隆的按鈕以便後續使用
+  return btnClone;
+}
+
+// 修改後的 createButtonContainer 函數
+function createButtonContainer(originalBtn) {
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.alignItems = 'center';
+  buttonContainer.style.marginBottom = '10px';
+  
+  // 不再克隆按鈕，只是創建容器
+  return {
+    buttonContainer,
+    newBtn: originalBtn // 直接使用原始按鈕
+  };
+}
+
+
+// 創建按鈕容器
+function createButtonContainer(btn) {
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.alignItems = 'center';
+  buttonContainer.style.marginBottom = '10px';
+  
+  return {
+    buttonContainer,
+    newBtn: btn.cloneNode(true) // 克隆原始按鈕
+  };
+}
+
+// 創建COPY按鈕
+function createCopyButton() {
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = '';
+  return copyBtn;
+}
+
+// 創建UPDATE按鈕
+function createUpdateButton() {
+  const updateBtn = document.createElement('button');
+  updateBtn.className = 'update-btn';
+  updateBtn.textContent = '更新';
+  updateBtn.title = '更新內容並調整連接';
+  return updateBtn;
+}
+
+// 將按鈕添加到容器
+function addButtonsToContainer(container, originalBtn, updateBtn) {
+  container.appendChild(originalBtn.cloneNode(true));
+  container.appendChild(updateBtn);
+}
+
+// 替換原始按鈕
+function replaceOriginalButton(originalBtn, newContainer) {
+  originalBtn.parentNode.replaceChild(newContainer, originalBtn);
+}
+
+// 設置COPY按鈕事件
+function setupCopyButtonEvents(copyBtn, popup) {
+  copyBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleCopyText(popup.textContent, copyBtn);
+  });
+}
+
+// 處理複製文本
+function handleCopyText(text, copyBtn) {
+  try {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        updateButtonTextTemporarily(copyBtn, '已複製!');
+      })
+      .catch(err => {
+        console.error('複製失敗:', err);
+        updateButtonTextTemporarily(copyBtn, '複製失敗');
+      });
+  } catch (err) {
+    console.error('複製失敗:', err);
+    updateButtonTextTemporarily(copyBtn, '複製失敗');
+  }
+}
+
+// 暫時更新按鈕文本
+function updateButtonTextTemporarily(button, text) {
+  button.textContent = text;
+  setTimeout(() => {
+    button.textContent = '';
+  }, 2000);
+}
+
+// 設置UPDATE按鈕事件
+function setupUpdateButtonEvents(updateBtn, popup, nodeData) {
+  updateBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showUpdateDialog(popup.textContent, (newContent) => {
+      if (newContent !== null) {
+        updateNodeContent(nodeData, newContent);
+      }
+    });
+  });
+}
+
+// 保存彈出框原始位置
+function saveOriginalPopupPosition(popup) {
+  return {
+    originalParent: popup.parentNode,
+    originalNextSibling: popup.nextSibling,
+    originalStyles: {
+      position: popup.style.position,
+      left: popup.style.left,
+      top: popup.style.top,
+      zIndex: popup.style.zIndex
+    }
+  };
+}
+
+// 設置彈出框切換事件
+function setupPopupToggleEvents(button, popup) {
+  button.addEventListener('click', (e) => {
+    document.body.appendChild(popup);
+    popup.style.position = 'fixed';
+    popup.style.zIndex = '2147483647';
+    popup.style.display = 'block';
+    ALL_ACTIVE_POPUPS.add(popup);
+    activePopup = popup;
+    arrangePopups();
+    e.stopPropagation();
+  });
+}
+
+// 設置全局事件處理器
+function setupGlobalEventHandlers(popup, originalParent, originalNextSibling, originalStyles, paragraphInput, nodeData) {
+  const handleClickOutside = createClickOutsideHandler(popup, originalParent, originalNextSibling, originalStyles);
+  const clearHandler = createClearHandler(popup, paragraphInput, nodeData);
+
+  document.addEventListener('click', handleClickOutside);
+  document.addEventListener('keydown', clearHandler);
+
+  setupPopupCleanup(popup, handleClickOutside, clearHandler);
+}
+
+// 創建點擊外部處理器
+function createClickOutsideHandler(popup, originalParent, originalNextSibling, originalStyles) {
+  return (e) => {
+    const isClickInsideAnyPopup = checkIfClickInsideAnyPopup(e);
+
+    if (!isClickInsideAnyPopup) {
+      closeAllPopups(popup, originalParent, originalNextSibling, originalStyles);
+    }
+  };
+}
+
+// 檢查是否點擊了任何彈窗
+function checkIfClickInsideAnyPopup(e) {
+  let isClickInsideAnyPopup = false;
+
+  ALL_ACTIVE_POPUPS.forEach(p => {
+    const relatedBtn = p.previousElementSibling?.classList?.contains('paragraph-btn')
+      ? p.previousElementSibling
+      : null;
+
+    if (p.contains(e.target) || (relatedBtn && relatedBtn.contains(e.target))) {
+      isClickInsideAnyPopup = true;
+    }
+  });
+
+  return isClickInsideAnyPopup;
+}
+
+// 關閉所有彈窗
+function closeAllPopups(popup, originalParent, originalNextSibling, originalStyles) {
+  ALL_ACTIVE_POPUPS.forEach(p => {
+    p.style.display = 'none';
+    restoreOriginalPosition(p, originalParent, originalNextSibling, originalStyles);
+  });
+  ALL_ACTIVE_POPUPS.clear();
+  activePopup = null;
+}
+
+// 恢復原始位置
+function restoreOriginalPosition(popup, originalParent, originalNextSibling, originalStyles) {
+  if (originalParent && popup.parentNode === document.body) {
+    originalParent.insertBefore(popup, originalNextSibling);
+  }
+  Object.entries(originalStyles).forEach(([prop, value]) => {
+    popup.style[prop] = value;
+  });
+}
+
+// 創建清除處理器
+function createClearHandler(popup, paragraphInput, nodeData) {
+  return (e) => {
+    if (e.key.toLowerCase() === 'x' && activePopup === popup) {
+      clearParagraphInput(paragraphInput, nodeData, popup);
+      e.preventDefault();
+    }
+  };
+}
+
+// 清除段落輸入
+function clearParagraphInput(paragraphInput, nodeData, popup) {
+  paragraphInput.value = '';
+  resetItemsList(nodeData);
+  popup.style.display = 'none';
+  ALL_ACTIVE_POPUPS.delete(popup);
+  activePopup = null;
+}
+
+// 設置彈出框清理
+function setupPopupCleanup(popup, clickHandler, keyHandler) {
+  popup.addEventListener('DOMNodeRemoved', () => {
+    document.removeEventListener('click', clickHandler);
+    document.removeEventListener('keydown', keyHandler);
+    ALL_ACTIVE_POPUPS.delete(popup);
+  });
+}
+
+// 新增顯示更新對話框的函數
+function showUpdateDialog(currentContent, callback) {
+  // 創建對話框元素
+  const dialog = document.createElement('div');
+  dialog.className = 'update-dialog';
+  
+  // 對話框內容
+  dialog.innerHTML = `
+    <div class="update-dialog-content">
+      <textarea id="update-dialog-textarea">${escapeHtml(currentContent)}</textarea>
+      <div class="update-dialog-buttons">
+        <button class="update-dialog-cancel">取消</button>
+        <button class="update-dialog-confirm">確認</button>
+      </div>
+    </div>
+  `;
+  
+  // 添加到body
+  document.body.appendChild(dialog);
+  
+  // 獲取元素引用
+  const textarea = dialog.querySelector('#update-dialog-textarea');
+  const cancelBtn = dialog.querySelector('.update-dialog-cancel');
+  const confirmBtn = dialog.querySelector('.update-dialog-confirm');
+  
+  // 聚焦到textarea
+  textarea.focus();
+  
+  // 取消按鈕點擊事件
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(dialog);
+    callback(null);
+  });
+  
+  // 確認按鈕點擊事件
+  confirmBtn.addEventListener('click', () => {
+    const newContent = textarea.value.trim();
+    document.body.removeChild(dialog);
+    callback(newContent);
+  });
+  
+  // 按ESC鍵關閉對話框
+  dialog.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(dialog);
+      callback(null);
+    }
+  });
+}
+
+
+function updateNodeContent(nodeData, newContent) {
+  const element = nodeData.element;
+  
+  // 1. 更新內容顯示
+  const popup = element.querySelector('.paragraph-popup');
+  const btn = element.querySelector('.paragraph-btn');
+  popup.textContent = newContent;
+  btn.textContent = newContent.length > 50 
+    ? newContent.substring(0, 47) + '...' 
+    : newContent;
+  btn.dataset.originalContent = newContent;
+
+  // 2. 提取函數信息
+  const newFunctionName = extractFunctionName(newContent);
+  if (newFunctionName) {
+    element.querySelector('.node-title').value = newFunctionName;
+    updateSameNameHighlights();
+  }
+
+  // 3. 獲取新舊函數列表
+  const newCalledFunctions = extractCalledFunctions(newContent, newFunctionName);
+  const oldItems = Array.from(element.querySelectorAll('.item-text')).map(item => item.value);
+
+  // 4. 建立精確連接映射表（使用位置+名稱作為鍵）
+  const connectionMap = new Map();
+  connections.forEach(conn => {
+    if (conn.fromNode === nodeData.id) {
+      const itemName = oldItems[conn.fromOutput];
+      connectionMap.set(`${conn.fromOutput}_${itemName}`, {
+        toNode: conn.toNode,
+        toInput: conn.toInput
+      });
+    }
+  });
+
+  // 5. 完全清除舊連接
+  connections = connections.filter(conn => conn.fromNode !== nodeData.id);
+
+  // 6. 重建項目列表
+  const itemsContainer = element.querySelector('.items');
+  itemsContainer.innerHTML = '';
+  nodeData.outputs = [];
+
+  // 7. 智能重建項目和連接
+  newCalledFunctions.forEach((newFunc, newIndex) => {
+    // 創建新項目
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'item';
+    itemDiv.innerHTML = `
+      <input type="text" class="item-text" value="${escapeHtml(newFunc)}">
+      <button class="add-node-btn">+</button>
+      <div class="output-port" data-type="output"></div>
+    `;
+    itemsContainer.appendChild(itemDiv);
+    nodeData.outputs.push(newIndex);
+
+    // 設置交互
+    setupAddNodeButton(itemDiv, nodeData, newIndex, container);
+    setupOutputPort(itemDiv, nodeData, newIndex, container);
+
+    // 恢復連接的智能邏輯
+    let connectionRestored = false;
+    
+    // 情況1：完全匹配原位置和名稱
+    const exactKey = `${newIndex}_${newFunc}`;
+    if (connectionMap.has(exactKey)) {
+      const { toNode, toInput } = connectionMap.get(exactKey);
+      connections.push({
+        fromNode: nodeData.id,
+        fromOutput: newIndex,
+        toNode,
+        toInput
+      });
+      connectionRestored = true;
+    }
+    
+    // 情況2：名稱匹配但位置變化（防止因插入新項目導致錯誤連接）
+    if (!connectionRestored) {
+      for (const [key, connData] of connectionMap) {
+        const [oldIndex, oldFunc] = key.split('_');
+        if (oldFunc === newFunc) {
+          // 確保這是第一個匹配的且未被使用的連接
+          if (!connections.some(c => 
+            c.fromNode === nodeData.id && 
+            c.toNode === connData.toNode &&
+            c.toInput === connData.toInput
+          )) {
+            connections.push({
+              fromNode: nodeData.id,
+              fromOutput: newIndex,
+              toNode: connData.toNode,
+              toInput: connData.toInput
+            });
+            connectionMap.delete(key); // 防止重複使用
+            break;
+          }
+        }
+      }
+    }
+  });
+
+  // 8. 最終處理
+  drawConnections();
+  showStatusMessage('內容已更新，連接精確保持', 'success');
+}
+
+// 初始化畫布大小
+function resizeCanvas() {
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 視圖轉換函數
+function toWorldX(x) {
+  return (x - translateX) / scale;
+}
+
+function toWorldY(y) {
+  return (y - translateY) / scale;
+}
+
+function toScreenX(x) {
+  return x * scale + translateX;
+}
+
+function toScreenY(y) {
+  return y * scale + translateY;
+}
+
+// 提取到外部的工具函數
+function extractFunctionName(content) {
+  const functionNameMatch = content.match(/function\s+([a-zA-Z_$][0-9a-zA-Z_$]*)/);
+  return functionNameMatch ? functionNameMatch[1] : null;
+}
+
+function extractCalledFunctions(content, functionNameToExclude) {
+  const functionCallRegex = /([a-zA-Z_$][0-9a-zA-Z_$]*)\s*\([^)]*\)/g;
+  const functionNames = new Set();
+  let match;
+
+  while ((match = functionCallRegex.exec(content)) !== null) {
+    const calledFunctionName = match[1];
+    // 檢查是否在黑名單中或是要排除的函數名
+    if (!FUNCTION_BLACKLIST.includes(calledFunctionName) &&
+    calledFunctionName !== functionNameToExclude) {
+      functionNames.add(calledFunctionName);
+    }
+  }
+
+  return Array.from(functionNames);
+}
+// HTML转义辅助函数
+function escapeHtml(unsafe) {
+  return unsafe
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#039;");
+}
+
+// 显示状态消息函数
+function showStatusMessage(message, type = 'info') {
+  const msg = document.createElement('div');
+  msg.textContent = message;
+  msg.style.position = 'fixed';
+  msg.style.bottom = '20px';
+  msg.style.right = '20px';
+  msg.style.padding = '10px 20px';
+  msg.style.background = type === 'error' ? '#ff4444' : '#4CAF50';
+  msg.style.color = 'white';
+  msg.style.borderRadius = '4px';
+  msg.style.zIndex = '10000';
+
+  document.body.appendChild(msg);
+
+  setTimeout(() => {
+    msg.style.transition = 'opacity 0.5s';
+    msg.style.opacity = '0';
+    setTimeout(() => msg.remove(), 500);
+  }, 3000);
+}
+
+
+function setupAddNodeButton(itemElement, nodeData, outputIndex, container) {
+  itemElement.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    const name = itemElement.querySelector('.item-text').value;
+
+    const childNodes = connections.filter(conn =>
+    conn.fromNode === nodeData.id &&
+    conn.fromOutput === outputIndex
+    ).length;
+
+    const baseX = nodeData.x + 200 / scale;
+    const baseY = nodeData.y + (childNodes * 120 / scale);
+
+    const newNode = createNode(
+    baseX,
+    baseY,
+    name + ' 節點'
+    );
+
+    connections.push( {
+      fromNode: nodeData.id,
+      fromOutput: outputIndex,
+      toNode: newNode.id
+    });
+    drawConnections();
+    e.stopPropagation();
+  });
+}
+
+function setupOutputPort(itemElement, nodeData, outputIndex, container) {
+  itemElement.querySelector('.output-port').addEventListener('mousedown', (e) => {
+    if (spacePressed || e.button === 1) return;
+
+    const rect = e.target.getBoundingClientRect();
+    connecting = {
+      startX: rect.left + rect.width / 2,
+      startY: rect.top + rect.height / 2,
+      fromNode: nodeData.id,
+      fromOutput: outputIndex
+    };
+    container.classList.add('connecting');
+    e.stopPropagation();
+  });
+}
+
+function createFunctionItems(nodeData, functionNames, container) {
+  const itemsContainer = nodeData.element.querySelector('.items');
+  itemsContainer.innerHTML = '';
+
+  functionNames.forEach((name, index) => {
+    const newItem = document.createElement('div');
+    newItem.className = 'item';
+    newItem.innerHTML = `
+  <input type="text" class="item-text" value="${name}">
+    <button class="add-node-btn">+</button>
+    <div class="output-port" data-type="output"></div>
+    `;
+    itemsContainer.appendChild(newItem);
+
+    nodeData.outputs = functionNames.map((_, i) => i);
+    setupAddNodeButton(newItem, nodeData, index, container);
+    setupOutputPort(newItem, nodeData, index, container);
+  });
+}
+
+function setupParagraphPopup(paragraphInput, content, nodeData) {
+  const btn = document.createElement('button');
+  btn.className = 'paragraph-btn';
+  btn.textContent = content.length > 50 ? content.substring(0, 47) + '...' : content;
+
+  const popup = document.createElement('div');
+  popup.className = 'paragraph-popup';
+  popup.textContent = content;
+
+  // 添加節點顏色類到彈出框
+  const colorClass = getCurrentColorClass(nodeData);
+  popup.classList.add(colorClass);
+
+  const container = document.createElement('div');
+  container.style.position = 'relative';
+  container.style.display = 'inline-block';
+  container.style.width = '100%';
+
+  // 保存原始輸入框的引用
+  const originalInput = paragraphInput.cloneNode(true);
+  originalInput.style.display = 'none';
+  container.appendChild(originalInput);
+
+  container.appendChild(btn);
+  container.appendChild(popup);
+
+  paragraphInput.replaceWith(container);
+
+  // 每次點擊都創建新的彈出框容器
+  btn.addEventListener('click', (e) => {
+    // 移除現有的彈出框（如果存在）
+    if (nodeData.popupContainer) {
+      nodeData.popupContainer.remove();
+    }
+
+    const btnRect = btn.getBoundingClientRect();
+    const btnCenterX = btnRect.left + btnRect.width / 2;
+    const btnCenterY = btnRect.top + btnRect.height / 2;
+    
+    const worldX = (btnCenterX - translateX) / scale;
+    const worldY = (btnCenterY - translateY) / scale;
+    
+    const popupWidth = 600;
+    const popupHeight = 200;
+    
+    // 創建新的彈出框容器
+    nodeData.popupContainer = document.createElement('div');
+    const popupContainer = nodeData.popupContainer;
+    
+    popupContainer.style.position = 'fixed';
+    popupContainer.style.left = '0';
+    popupContainer.style.top = '0';
+    popupContainer.style.width = `${popupWidth}px`;
+    popupContainer.style.height = `${popupHeight}px`;
+    popupContainer.style.transform = `
+      translate(${worldX * scale + translateX - popupWidth/2}px, 
+                ${worldY * scale + translateY - popupHeight/2}px)
+    `;
+    popupContainer.style.zIndex = '10000';
+    
+    // 克隆彈出框內容以避免DOM重複問題
+    const popupClone = popup.cloneNode(true);
+    popupClone.style.display = 'block';
+    popupClone.style.position = 'absolute';
+    popupClone.style.width = '100%';
+    popupClone.style.height = '100%';
+    popupClone.style.overflow = 'auto';
+    
+    popupContainer.appendChild(popupClone);
+    document.body.appendChild(popupContainer);
+
+    // 設置為當前活動彈出框
+    activePopup = popupClone;
+    popupScrollPosition = 0;
+    updatePopupScroll();
+    
+    e.stopPropagation();
+  });
+
+  // 保留原有的鍵盤事件監聽
+  const clearContentHandler = function(e) {
+    if (e.key.toLowerCase() === 'x' && activePopup === popup) {
+      originalInput.value = '';
+      resetItemsList(nodeData);
+      container.replaceWith(originalInput);
+      document.removeEventListener('keydown', clearContentHandler);
+      if (nodeData.popupContainer) {
+        nodeData.popupContainer.remove();
+        nodeData.popupContainer = null;
+      }
+      activePopup = null;
+      e.preventDefault();
+    }
+  };
+  document.addEventListener('keydown', clearContentHandler);
+
+  // 點擊外部關閉
+  document.addEventListener('click', (e) => {
+    if (nodeData.popupContainer && 
+        !nodeData.popupContainer.contains(e.target) && 
+        !container.contains(e.target)) {
+      nodeData.popupContainer.remove();
+      nodeData.popupContainer = null;
+      activePopup = null;
+    }
+  });
+}
+
+
+
+function getCurrentColorClass(nodeData) {
+  const nodeElement = nodeData.element;
+  for (const colorClass of COLOR_CLASSES) {
+    if (nodeElement.classList.contains(colorClass)) {
+      return colorClass;
+    }
+  }
+  return COLOR_CLASSES[0]; // 默認顏色
+}
+
+
+function changeNodeColor(nodeData, colorIndex) {
+  // 移除所有顏色類
+  nodeData.element.classList.remove(...COLOR_CLASSES);
+  
+  // 添加新顏色類
+  const newColorClass = COLOR_CLASSES[colorIndex % COLOR_CLASSES.length];
+  nodeData.element.classList.add(newColorClass);
+  
+  // 更新節點數據
+  nodeData.colorIndex = colorIndex;
+  
+  // 更新彈出框顏色（如果存在）
+  const popup = nodeData.element.querySelector('.paragraph-popup');
+  if (popup) {
+    popup.classList.remove(...COLOR_CLASSES);
+    popup.classList.add(newColorClass);
+  }
+  
+  // 更新彈出框容器顏色（如果存在）
+  if (nodeData.popupContainer) {
+    const popupInContainer = nodeData.popupContainer.querySelector('.paragraph-popup');
+    if (popupInContainer) {
+      popupInContainer.classList.remove(...COLOR_CLASSES);
+      popupInContainer.classList.add(newColorClass);
+    }
+  }
+}
+
+
+
+function resetItemsList(nodeData) {
+  const itemsContainer = nodeData.element.querySelector('.items');
+  itemsContainer.innerHTML = `
+  <div class="item">
+  <input type="text" class="item-text" value="">
+  <button class="add-node-btn">+</button>
+  <div class="output-port" data-type="output"></div>
+  </div>
+  `;
+
+  nodeData.outputs = [0];
+  const newItem = itemsContainer.querySelector('.item');
+  setupAddNodeButton(newItem, nodeData, 0, container);
+  setupOutputPort(newItem, nodeData, 0, container);
+
+  // 恢復輸入框（如果被替換）
+  const containerDiv = nodeData.element.querySelector('.paragraph-container');
+  if (containerDiv) {
+    const textarea = document.createElement('textarea');
+    textarea.className = 'paragraph-input';
+    textarea.placeholder = '貼上段落內容...';
+    containerDiv.replaceWith(textarea);
+  }
+}
+
+
+function arrangeChildNodes(parentNodeId) {
+  const children = connections.filter(conn => conn.fromNode === parentNodeId)
+  .map(conn => nodes[conn.toNode]);
+
+  children.forEach((child, index) => {
+    child.x = nodes[parentNodeId].x + 200 / scale;
+    child.y = nodes[parentNodeId].y + (index * 120 / scale);
+    updateNodePosition(child);
+  });
+
+  drawConnections();
+}
+
+
+function toggleNodeColors() {
+    selectedNodes.forEach(nodeId => {
+        const node = nodes[nodeId];
+        if (node) {
+            const nodeElement = node.element;
+            const popup = nodeElement.querySelector('.paragraph-popup');
+            
+            // 使用節點自己的 colorIndex 或默認使用 currentColorIndex
+            const nodeColorIndex = node.colorIndex !== undefined ? node.colorIndex : currentColorIndex;
+            
+            // 計算下一個顏色索引
+            const nextColorIndex = (nodeColorIndex + 1) % COLOR_CLASSES.length;
+            
+            // 移除所有顏色類
+            COLOR_CLASSES.forEach(cls => {
+                nodeElement.classList.remove(cls);
+                if (popup) popup.classList.remove(cls);
+            });
+            
+            // 添加新顏色類
+            const isTransparent = nodeElement.classList.contains('transparent');
+            const colorClass = isTransparent ? 
+                `transparent ${COLOR_CLASSES[nextColorIndex]}` : 
+                COLOR_CLASSES[nextColorIndex];
+            
+            nodeElement.className = nodeElement.className.split(' ')
+                .filter(c => !COLOR_CLASSES.includes(c) && c !== 'transparent')
+                .join(' ') + ' ' + colorClass;
+            
+            // 更新彈出框顏色
+            if (popup) {
+                popup.className = popup.className.split(' ')
+                    .filter(c => !COLOR_CLASSES.includes(c))
+                    .join(' ') + ' ' + COLOR_CLASSES[nextColorIndex];
+            }
+            
+            // 更新節點的顏色索引
+            node.colorIndex = nextColorIndex;
+        }
+    });
+    
+    // 更新全局 currentColorIndex 以便新選中的節點使用
+    currentColorIndex = (currentColorIndex + 1) % COLOR_CLASSES.length;
+    
+    showStatusMessage(`已切換到下一個顏色`, 'success');
+}
+
+
+
+// 主函數
+function createNode(x, y, title = '節點') {
+  const node = createNodeElement(x, y, title);
+  const nodeData = initializeNodeData(node, x, y);
+
+  setupNodeDrag(node, nodeData);
+  setupCollapseButton(node, nodeData); // 添加這行
+  setupDeleteButton(node, nodeData);
+  setupTitleInput(node);
+  setupParagraphInput(node, nodeData);
+  setupInitialAddButton(node, nodeData);
+  setupAddItemButton(node, nodeData);
+  setupGenerateButton(node, nodeData); // 添加這行
+  setupPortEvents(node, nodeData);
+
+  updateNodePosition(nodeData);
+  return nodeData;
+}
+
+// 创建节点DOM元素
+function createNodeElement(x, y, title) {
+  const node = document.createElement('div');
+  node.className = `node ${COLOR_CLASSES[0]}`;
+  node.style.left = `${x}px`;
+  node.style.top = `${y}px`;
+  node.innerHTML = `
+<div class="node-header">
+  <div class="input-port" data-type="input"></div>
+  <button class="collapse-btn">-</button>
+  <button class="jump-to-btn hidden" title="跳轉到同名節點"></button>
+  <input type="text" class="node-title" value="${title}">
+  <button class="delete-node-btn">×</button>
+  <!-- 單一的header端口 -->
+  <div class="output-port header-port" data-type="output" style="display:none"></div>
+</div>
+    <div class="collapsible">
+      <textarea class="paragraph-input" placeholder="貼上段落內容..."></textarea>
+      <div class="items">
+        <div class="item">
+          <input type="text" class="item-text" value="">
+          <button class="add-node-btn">+</button>
+          <div class="output-port" data-type="output" data-output-index="0"></div>
+        </div>
+      </div>
+      <div class="buttons-container">
+        <button class="add-item-btn">新加項目</button>
+        <button class="generate-btn">一次生成</button>
+      </div>
+    </div>
+  `;
+  
+  nodesContainer.appendChild(node);
+  return node;
+}
+
+
+
+// 添加折疊按鈕事件處理
+function setupCollapseButton(node, nodeData) {
+  const collapseBtn = node.querySelector('.collapse-btn');
+  collapseBtn.addEventListener('click', (e) => {
+    node.classList.toggle('collapsed');
+    
+    const collapsible = node.querySelector('.collapsible');
+    const originalPorts = node.querySelectorAll('.output-port:not(.header-port)');
+    const headerPort = node.querySelector('.header-port'); // 現在只有一個header端口
+    
+    if (node.classList.contains('collapsed')) {
+      // 折疊狀態：隱藏所有原始端口，顯示單一header端口
+      originalPorts.forEach(port => port.style.display = 'none');
+      if (!headerPort) {
+        // 創建單一的header端口
+        const port = document.createElement('div');
+        port.className = 'output-port header-port';
+        port.dataset.type = 'output';
+        port.style.display = 'block';
+        node.querySelector('.node-header').appendChild(port);
+      } else {
+        headerPort.style.display = 'block';
+      }
+      collapseBtn.textContent = '+';
+    } else {
+      // 展開狀態：顯示原始端口，隱藏header端口
+      originalPorts.forEach(port => port.style.display = 'block');
+      if (headerPort) headerPort.style.display = 'none';
+      collapseBtn.textContent = '-';
+    }
+    
+    drawConnections();
+    e.stopPropagation();
+  });
+}
+
+
+
+// 修改 updateJumpButton 函數
+function updateJumpButton(node) {
+  const title = node.element.querySelector('.node-title').value;
+  const jumpBtn = node.element.querySelector('.jump-to-btn');
+
+  // 查找所有同名節點
+  const sameNameNodes = nodes.filter(n =>
+  n.id !== node.id &&
+  n.element.querySelector('.node-title').value === title
+  );
+
+  if (sameNameNodes.length > 0) {
+    jumpBtn.classList.remove('hidden');
+    jumpBtn.setAttribute('data-count', sameNameNodes.length);
+  jumpBtn.title = `顯示同名節點 (共 ${sameNameNodes.length} 個)`;
+  } else {
+    jumpBtn.classList.add('hidden');
+    jumpBtn.removeAttribute('data-count');
+  }
+}
+
+// 跳轉到同名節點
+// 修改 jumpToSameNameNode 函數
+function jumpToSameNameNode(node) {
+  const title = node.element.querySelector('.node-title').value;
+  const sameNameNodes = nodes.filter(n =>
+  n.id !== node.id &&
+  n.element.querySelector('.node-title').value === title
+  );
+
+  if (sameNameNodes.length > 0) {
+    // 移除所有現有的高亮
+    document.querySelectorAll('.node').forEach(n => {
+      n.classList.remove('highlight');
+    });
+
+    // 高亮所有同名節點
+    sameNameNodes.forEach(targetNode => {
+      targetNode.element.classList.add('highlight');
+    });
+
+    // 顯示提示信息
+    showJumpHint(node, node.jumpIndex + 1, sameNameNodes.length);
+
+    // 更新跳轉索引
+    node.jumpIndex = (node.jumpIndex + 1) % sameNameNodes.length;
+
+    // 設置定時器移除高亮
+    setTimeout(() => {
+      sameNameNodes.forEach(targetNode => {
+        targetNode.element.classList.remove('highlight');
+      });
+    }, 10000);
+  }
+}
+
+// 顯示跳轉順序提示
+function showJumpHint(node, current, total) {
+  const hint = document.createElement('div');
+  hint.className = 'jump-hint';
+hint.textContent = `${current}/${total}`;
+  hint.style.position = 'absolute';
+  hint.style.left = '20px';
+  hint.style.top = '20px';
+  hint.style.background = 'rgba(255, 204, 0, 0.8)';
+  hint.style.color = 'black';
+  hint.style.padding = '5px 10px';
+  hint.style.borderRadius = '10px';
+  hint.style.zIndex = '10000';
+
+  document.body.appendChild(hint);
+
+  setTimeout(() => {
+    hint.style.opacity = '0';
+    hint.style.transition = 'opacity 0.5s';
+    setTimeout(() => hint.remove(), 500);
+  }, 1000);
+}
+
+
+
+
+// 初始化节点数据
+function initializeNodeData(node, x, y) {
+  const nodeData = {
+    element: node,
+    id: nodes.length,
+    outputs: [0],
+    x,
+    y,
+    jumpIndex: 0 // 新增跳轉索引
+  };
+  nodes.push(nodeData);
+
+  // 設置跳轉按鈕事件
+  const jumpBtn = node.querySelector('.jump-to-btn');
+  jumpBtn.addEventListener('click', (e) => {
+    jumpToSameNameNode(nodeData);
+    e.stopPropagation();
+  });
+
+  return nodeData;
+}
+
+// 设置节点拖拽
+function setupNodeDrag(node, nodeData) {
+  node.addEventListener('mousedown', (e) => {
+    if (e.target.className.includes('node') || e.target.className === 'node-title') {
+      if (spacePressed || e.button === 1) return;
+
+      draggingNode = nodeData;
+      dragStartWorldX = toWorldX(e.clientX);
+      dragStartWorldY = toWorldY(e.clientY);
+      dragOffsetX = dragStartWorldX - nodeData.x;
+      dragOffsetY = dragStartWorldY - nodeData.y;
+
+      e.stopPropagation();
+    }
+  });
+}
+
+// 设置删除按钮
+// 修改刪除節點函數
+function setupDeleteButton(node, nodeData) {
+  node.querySelector('.delete-node-btn').addEventListener('click', (e) => {
+    // 移除所有與該節點相關的連接
+    connections = connections.filter(conn =>
+    conn.fromNode !== nodeData.id && conn.toNode !== nodeData.id
+    );
+
+    // 重新索引節點ID
+    nodes = nodes.filter(n => n.id !== nodeData.id);
+    nodes.forEach((n, index) => {
+      n.id = index; // 重新分配連續的ID
+    });
+
+    // 更新連接中的節點ID引用
+    connections.forEach(conn => {
+      if (conn.fromNode > nodeData.id) conn.fromNode--;
+      if (conn.toNode > nodeData.id) conn.toNode--;
+    });
+
+    node.remove();
+    drawConnections();
+    updateSameNameHighlights(); // 刪除後更新高亮
+    e.stopPropagation();
+  });
+}
+
+// 设置标题输入
+function setupTitleInput(node) {
+  const titleInput = node.querySelector('.node-title');
+  titleInput.addEventListener('input', () => {
+    titleInput.value = titleInput.value.trim();
+    
+    // 檢查是否有相同名稱的節點已經有描述
+    const nodeData = findNodeByElement(node);
+    if (nodeData) {
+      const sameNameNodes = nodes.filter(n => 
+        n.id !== nodeData.id &&
+        n.element.querySelector('.node-title').value === titleInput.value
+      );
+      
+      if (sameNameNodes.length > 0 && !nodeDescriptions[nodeData.id]) {
+        // 使用第一個同名節點的描述
+        const firstSameNameNode = sameNameNodes[0];
+        if (nodeDescriptions[firstSameNameNode.id]) {
+          nodeDescriptions[nodeData.id] = nodeDescriptions[firstSameNameNode.id];
+          updateNodeList(); // 觸發更新
+        }
+      }
+    }
+    
+    updateSameNameHighlights();
+   
+    if (nodeData) {
+      nodeData.jumpIndex = 0;
+      updateJumpButton(nodeData);
+    }
+    nodes.forEach(n => updateJumpButton(n));
+  });
+
+  const nodeData = findNodeByElement(node);
+  if (nodeData) {
+    updateJumpButton(nodeData);
+  }
+}
+
+
+
+function syncDescriptionsForSameNameNodes(nodeId) {
+  const node = nodes[nodeId];
+  if (!node) return;
+  
+  const title = node.element.querySelector('.node-title')?.value || '未命名節點';
+  const description = nodeDescriptions[nodeId];
+  
+  if (description && description.trim() !== '') {
+    // 更新所有同名節點的描述
+    nodes.forEach(n => {
+      if (n.id !== nodeId) {
+        const nTitle = n.element.querySelector('.node-title')?.value || '未命名節點';
+        if (nTitle === title) {
+          nodeDescriptions[n.id] = description;
+        }
+      }
+    });
+  }
+}
+// 新增函數：更新所有同名節點的高亮狀態
+function updateSameNameHighlights() {
+  // 先移除所有高亮
+  document.querySelectorAll('.node').forEach(node => {
+    node.classList.remove('highlight-same-name');
+  });
+
+  // 建立節點名稱映射
+const nameMap = {};
+  nodes.forEach(node => {
+    const title = node.element.querySelector('.node-title').value;
+    if (!nameMap[title]) {
+      nameMap[title] = [];
+    }
+    nameMap[title].push(node);
+  });
+
+  // 為有相同名稱的節點添加高亮
+  Object.entries(nameMap).forEach(([title, sameNameNodes]) => {
+    if (sameNameNodes.length > 1) {
+      sameNameNodes.forEach(node => {
+        node.element.classList.add('highlight-same-name');
+      });
+    }
+  });
+}
+
+
+
+// 设置段落输入
+function setupParagraphInput(node, nodeData) {
+  const paragraphInput = node.querySelector('.paragraph-input');
+  paragraphInput.addEventListener('input', function() {
+    handleParagraphInput(this, node, nodeData);
+  });
+}
+
+// 处理段落输入
+function handleParagraphInput(inputElement, node, nodeData) {
+  visibleNodes = getVisibleNodes(); // Get the current visible nodes
+  
+  if (visibleNodes.length === 0) {
+    nodeList.innerHTML = '<div class="no-nodes-message">目前沒有可見節點</div>';
+    return;
+  }
+  
+  const content = inputElement.value.trim();
+  if (content === '') return;
+
+  const functionName = extractFunctionName(content);
+  if (functionName) {
+    node.querySelector('.node-title').value = functionName;
+  }
+
+  const calledFunctions = extractCalledFunctions(content, functionName);
+  if (calledFunctions.length > 0) {
+    createFunctionItems(nodeData, calledFunctions, container);
+  }
+
+  setupParagraphPopup(inputElement, content, nodeData);
+}
+
+// 设置初始添加按钮
+function setupInitialAddButton(node, nodeData) {
+  node.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    handleAddNodeClick(nodeData, 0, e);
+  });
+}
+
+// 设置添加项目按钮
+function setupAddItemButton(node, nodeData) {
+  node.querySelector('.add-item-btn').addEventListener('click', () => {
+    addNewItem(node, nodeData);
+  });
+}
+function setupGenerateButton(node, nodeData) {
+  node.querySelector('.generate-btn').addEventListener('click', () => {
+    // 獲取所有項目
+    const items = node.querySelectorAll('.item');
+    
+    // 計算基礎位置
+    const baseX = nodeData.x + 200 / scale;
+    let baseY = nodeData.y;
+    
+    // 為每個項目創建子節點
+    items.forEach((item, index) => {
+      const itemText = item.querySelector('.item-text').value;
+      
+      // 創建新節點
+      const newNode = createNode(
+        baseX,
+        baseY,
+        itemText + ' 節點'
+      );
+      
+      // 添加連接
+      connections.push({
+        fromNode: nodeData.id,
+        fromOutput: index,
+        toNode: newNode.id
+      });
+      
+      // 更新下一個節點的Y位置
+      baseY += 235 / scale;
+    });
+    
+    drawConnections();
+  });
+}
+
+
+
+
+// 添加新项目
+function addNewItem(node, nodeData) {
+  const items = node.querySelector('.items');
+  const itemCount = items.children.length;
+  const newItem = document.createElement('div');
+  newItem.className = 'item';
+  newItem.innerHTML = `
+    <input type="text" class="item-text" value="項目 ${itemCount + 1}">
+    <button class="add-node-btn">+</button>
+    <div class="output-port" data-type="output" data-output-index="${itemCount}"></div>
+  `;
+  items.appendChild(newItem);
+
+  // 為折疊狀態創建對應的header端口
+  const header = node.querySelector('.node-header');
+  const clone = newItem.querySelector('.output-port').cloneNode(true);
+  clone.classList.add('header-port');
+  clone.style.display = 'none';
+  header.appendChild(clone);
+
+  // 更新節點數據
+  const outputIndex = nodeData.outputs.length;
+  nodeData.outputs.push(outputIndex);
+
+  setupItemEvents(newItem, nodeData, outputIndex);
+}
+
+// 设置项目事件
+function setupItemEvents(item, nodeData, outputIndex) {
+  item.querySelector('.add-node-btn').addEventListener('click', (e) => {
+    handleAddNodeClick(nodeData, outputIndex, e);
+  });
+
+  setupOutputPort(item.querySelector('.output-port'), nodeData, outputIndex);
+}
+
+// 处理添加节点点击
+function handleAddNodeClick(nodeData, outputIndex, e) {
+  const childNodes = connections.filter(conn =>
+  conn.fromNode === nodeData.id &&
+  conn.fromOutput === outputIndex
+  ).length;
+
+  const newNodeX = nodeData.x + 200 / scale;
+  const newNodeY = nodeData.y + (childNodes * 120 / scale);
+
+  const newNode = createNode(newNodeX, newNodeY);
+
+  connections.push( {
+    fromNode: nodeData.id,
+    fromOutput: outputIndex,
+    toNode: newNode.id
+  });
+  drawConnections();
+  e.stopPropagation();
+}
+
+// 设置端口事件
+function setupPortEvents(node, nodeData) {
+  // 输入端口
+  node.querySelector('.input-port').addEventListener('mouseup', (e) => {
+    if (connecting) {
+      connections.push( {
+        fromNode: connecting.fromNode,
+        fromOutput: connecting.fromOutput,
+        toNode: nodeData.id
+      });
+      connecting = null;
+      container.classList.remove('connecting');
+      drawConnections();
+    }
+  });
+
+  // 初始输出端口
+  setupOutputPort(node.querySelector('.output-port'), nodeData, 0);
+}
+
+// 设置输出端口
+function setupOutputPort(portElement, nodeData, outputIndex) {
+  portElement.addEventListener('mousedown', (e) => {
+    if (spacePressed || e.button === 1) return;
+
+    // 獲取實際顯示的端口（可能是原始端口或header中的端口）
+    const visiblePort = portElement.style.display !== 'none' ? portElement : 
+      nodeData.element.querySelector(`.header-port:nth-child(${outputIndex + 4})`);
+    
+    const rect = visiblePort.getBoundingClientRect();
+    connecting = {
+      startX: rect.left + rect.width / 2,
+      startY: rect.top + rect.height / 2,
+      fromNode: nodeData.id,
+      fromOutput: outputIndex,
+      currentX: rect.left + rect.width / 2,
+      currentY: rect.top + rect.height / 2
+    };
+    container.classList.add('connecting');
+    e.stopPropagation();
+  });
+}
+
+// 修改節點位置更新函數
+function updateNodePosition(node) {
+node.element.style.left = `${node.x}px`;
+node.element.style.top = `${node.y}px`;
+  node.element.style.transform = 'none'; // 確保節點不受容器縮放影響
+}
+
+function updateAllNodesPosition() {
+  nodes.forEach(node => {
+    updateNodePosition(node);
+  });
+}
+// 更新彈出框的滾動位置
+function updatePopupScroll() {
+  if (activePopup) {
+    activePopup.scrollTop = popupScrollPosition;
+  }
+}
+
+
+// 创建框选元素
+function createSelectionBox() {
+  selectionBox = document.createElement('div');
+  selectionBox.className = 'selection-box';
+  selectionBox.style.display = 'none';
+  document.body.appendChild(selectionBox);
+  return selectionBox;
+}
+
+// 更新框选区域
+function updateSelectionBox(x1, y1, x2, y2) {
+  const left = Math.min(x1, x2);
+  const top = Math.min(y1, y2);
+  const width = Math.abs(x2 - x1);
+  const height = Math.abs(y2 - y1);
+
+selectionBox.style.left = `${left}px`;
+selectionBox.style.top = `${top}px`;
+selectionBox.style.width = `${width}px`;
+selectionBox.style.height = `${height}px`;
+  selectionBox.style.display = 'block';
+}
+
+// 清除选择
+function clearSelection() {
+  selectedNodes.forEach(id => {
+    const node = nodes[id];
+    if (node && node.element) {
+      node.element.classList.remove('selected');
+    }
+  });
+  selectedNodes.clear();
+  if (selectionBox) {
+    selectionBox.style.display = 'none';
+  }
+}
+
+// 检查节点是否在选择框内
+function isNodeInSelection(node, selectionRect) {
+  const nodeRect = node.element.getBoundingClientRect();
+
+  return (
+  nodeRect.right > selectionRect.left &&
+  nodeRect.left < selectionRect.right &&
+  nodeRect.bottom > selectionRect.top &&
+  nodeRect.top < selectionRect.bottom
+  );
+}
+
+// 选择节点
+function selectNodesInBox(selectionRect, additiveSelection = false) {
+    // 如果不是增減選擇模式，先清除選擇
+    if (!additiveSelection) {
+        clearSelection();
+    }
+
+    nodes.forEach(node => {
+        if (isNodeInSelection(node, selectionRect)) {
+            // 如果是增減選擇模式，切換選擇狀態
+            if (additiveSelection) {
+                if (selectedNodes.has(node.id)) {
+                    node.element.classList.remove('selected');
+                    selectedNodes.delete(node.id);
+                } else {
+                    node.element.classList.add('selected');
+                    selectedNodes.add(node.id);
+                }
+            } else {
+                // 普通模式，直接選擇
+                node.element.classList.add('selected');
+                selectedNodes.add(node.id);
+            }
+        }
+    });
+
+    return selectedNodes.size > 0;
+}
+
+
+
+
+function selectNodeAndChildren(nodeId) {
+    // 選取當前節點
+    const node = nodes[nodeId];
+    if (!node) return;
+    
+    node.element.classList.add('selected');
+    selectedNodes.add(nodeId);
+    
+    // 找出所有直接子節點
+    const children = connections.filter(conn => conn.fromNode === nodeId)
+                               .map(conn => conn.toNode);
+    
+    // 遞歸選取子節點
+    children.forEach(childId => {
+        selectNodeAndChildren(childId);
+    });
+    
+    drawConnections();
+}
+
+
+function copySelectedNodesContent() {
+  let allContent = '';
+  
+  selectedNodes.forEach(nodeId => {
+    const node = nodes[nodeId];
+    if (node) {
+      const popup = node.element.querySelector('.paragraph-popup');
+      const input = node.element.querySelector('.paragraph-input');
+      
+      if (popup) {
+        allContent += popup.textContent + '\n\n';
+      } else if (input) {
+        allContent += input.value + '\n\n';
+      }
+    }
+  });
+  
+  if (allContent) {
+    navigator.clipboard.writeText(allContent.trim())
+      .then(() => {
+        showStatusMessage(`已複製 ${selectedNodes.size} 個節點的內容`, 'success');
+      })
+      .catch(err => {
+        console.error('複製失敗:', err);
+        showStatusMessage('複製失敗', 'error');
+      });
+  } else {
+    showStatusMessage('沒有可複製的內容', 'warning');
+  }
+}
+
+
+// 初始化視圖位置
+translateX = window.innerWidth / 2 - 100;
+translateY = window.innerHeight / 2 - 50;
+nodesContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+  // 初始化一個節點時使用世界坐標系
+  //createNode(-100, -50); // 這會使節點出現在屏幕中心
+
+
+
+  // 更新鼠标事件处理
+  container.addEventListener('mousedown', (e) => {
+    if (e.button === 0 && !spacePressed && !draggingNode) { // 左键点击
+      const target = e.target;
+      const isNode = target.closest('.node');
+
+      if (!isNode) {
+        // 开始框选
+        isSelecting = true;
+        container.classList.add('selecting');
+        selectionStartX = e.clientX;
+        selectionStartY = e.clientY;
+
+        if (!selectionBox) {
+          createSelectionBox();
+        }
+        updateSelectionBox(selectionStartX, selectionStartY, e.clientX, e.clientY);
+        e.preventDefault();
+      } else if (selectedNodes.size > 0) {
+        // 如果已经有选中的节点，检查点击的是否是其中之一
+        const clickedNode = findNodeByElement(target.closest('.node'));
+        if (clickedNode && selectedNodes.has(clickedNode.id)) {
+          // 开始拖动所有选中的节点
+          draggingNode = clickedNode;
+          dragStartWorldX = toWorldX(e.clientX);
+          dragStartWorldY = toWorldY(e.clientY);
+          dragOffsetX = dragStartWorldX - clickedNode.x;
+          dragOffsetY = dragStartWorldY - clickedNode.y;
+        } else {
+          clearSelection();
+        }
+      }
+    } else if (spacePressed || e.button === 1) { // 空格或中键
+      isPanning = true;
+      panStartX = e.clientX - translateX;
+      panStartY = e.clientY - translateY;
+      container.classList.add('panning');
+      e.preventDefault();
+    }
+  });
+
+document.addEventListener('mouseup', (e) => {
+    if (isSelecting) {
+        const selectionRect = {
+            left: Math.min(selectionStartX, e.clientX),
+            right: Math.max(selectionStartX, e.clientX),
+            top: Math.min(selectionStartY, e.clientY),
+            bottom: Math.max(selectionStartY, e.clientY)
+        };
+
+        // 檢查是否有實際的選擇範圍（避免點擊誤觸發）
+        if (selectionRect.right - selectionRect.left > 5 || 
+            selectionRect.bottom - selectionRect.top > 5) {
+            
+            // 根據 SHIFT 鍵狀態決定是替換選擇還是增減選擇
+            if (!shiftPressed) {
+                clearSelection();
+            }
+            
+            selectNodesInBox(selectionRect, shiftPressed);
+        }
+        
+        isSelecting = false;
+        container.classList.remove('selecting');
+        if (selectionBox) {
+            selectionBox.style.display = 'none';
+        }
+    }
+
+    draggingNode = null;
+    connecting = null;
+    isPanning = false;
+    container.classList.remove('panning');
+    container.classList.remove('connecting');
+    drawConnections();
+});
+
+  // 替换mousemove事件中的拖拽部分
+  document.addEventListener('mousemove', (e) => {
+    if (isSelecting) {
+      updateSelectionBox(selectionStartX, selectionStartY, e.clientX, e.clientY);
+    } else if (isPanning) {
+      translateX = e.clientX - panStartX;
+      translateY = e.clientY - panStartY;
+      applyTransform();
+      drawConnections();
+    } else if (draggingNode) {
+      const currentWorldX = toWorldX(e.clientX);
+      const currentWorldY = toWorldY(e.clientY);
+
+      const deltaX = currentWorldX - dragStartWorldX;
+      const deltaY = currentWorldY - dragStartWorldY;
+
+      if (selectedNodes.size > 0) {
+        // 移动所有选中的节点
+        selectedNodes.forEach(id => {
+          const node = nodes[id];
+          if (node) {
+            node.x += deltaX;
+            node.y += deltaY;
+            updateNodePosition(node);
+          }
+        });
+      } else {
+        // 移动单个节点
+        draggingNode.x = currentWorldX - dragOffsetX;
+        draggingNode.y = currentWorldY - dragOffsetY;
+        updateNodePosition(draggingNode);
+      }
+
+      dragStartWorldX = currentWorldX;
+      dragStartWorldY = currentWorldY;
+      drawConnections();
+    } else if (connecting) {
+      connecting.currentX = e.clientX;
+      connecting.currentY = e.clientY;
+      drawConnections();
+    }
+  });
+
+
+function disconnectNodeFromParent(nodeId) {
+    // 找出所有指向該節點的連接（父節點到該節點的連接）
+    const parentConnections = connections.filter(conn => conn.toNode === nodeId);
+    
+    if (parentConnections.length === 0) {
+        showStatusMessage('該節點沒有父節點連接', 'warning');
+        return;
+    }
+    
+    // 移除這些連接
+    connections = connections.filter(conn => conn.toNode !== nodeId);
+    
+    // 重新繪製連接線
+    drawConnections();
+    
+    showStatusMessage(`已斷開 ${parentConnections.length} 個父節點連接`, 'success');
+}
+
+  // 鍵盤控制
+document.addEventListener('keydown', (e) => {
+    // 檢查是否正在輸入框中輸入內容
+    const isInputting = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+
+
+    // 處理 'z' 鍵：切換選中節點的顏色
+    if (e.key.toLowerCase() === 'z' && selectedNodes.size > 0 && !isInputting) {
+        toggleNodeColors();
+        e.preventDefault();
+    }
+
+    // 處理 'd' 鍵：斷開選中節點與父節點的連接
+    if (e.key.toLowerCase() === 'd' && selectedNodes.size === 1 && !isInputting) {
+        const nodeId = selectedNodes.values().next().value;
+        disconnectNodeFromParent(nodeId);
+        e.preventDefault();
+    }
+
+    // 處理 'q' 鍵：複製選中節點內容
+    if (e.key.toLowerCase() === 'q' && selectedNodes.size > 0) {
+        copySelectedNodesContent();
+        e.preventDefault();
+    }
+
+    // 處理 'space' 鍵：設置抓取光標
+    if (e.code === 'Space') {
+        spacePressed = true;
+        container.style.cursor = 'grab';
+    }
+
+    // 處理 'shift' 鍵：設置 shiftPressed 狀態
+    if (e.key === 'Shift') {
+        shiftPressed = true;
+    }
+
+    // 處理 'a' 鍵：選取子節點
+    if (e.key.toLowerCase() === 'a' && selectedNodes.size === 1) {
+        const firstSelectedId = selectedNodes.values().next().value;
+        const prevCount = selectedNodes.size;
+        selectNodeAndChildren(firstSelectedId);
+        const addedCount = selectedNodes.size - prevCount;
+        showStatusMessage(`已選取 ${addedCount} 個子節點`, 'success');
+        e.preventDefault();
+    }
+
+    // 處理 'e' 鍵：在視圖中心創建節點
+    if (e.key.toLowerCase() === 'e' && !isInputting) {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const worldX = toWorldX(centerX);
+        const worldY = toWorldY(centerY);
+        createNode(worldX, worldY);
+        e.preventDefault();
+    }
+
+    // 處理彈出框滾動
+    if (!activePopup) return;
+
+    const scrollStep = 20; // 每次滾動的像素數
+    switch (e.key.toLowerCase()) {
+        case 'w':
+            popupScrollPosition = Math.max(0, popupScrollPosition - scrollStep);
+            updatePopupScroll();
+            e.preventDefault();
+            break;
+        case 's':
+            const maxScroll = activePopup.scrollHeight - activePopup.clientHeight;
+            popupScrollPosition = Math.min(maxScroll, popupScrollPosition + scrollStep);
+            updatePopupScroll();
+            e.preventDefault();
+            break;
+    }
+});
+
+
+
+
+document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') {
+        spacePressed = false;
+        if (!isPanning) {
+            container.style.cursor = '';
+        }
+    } else if (e.key === 'Shift') {
+        shiftPressed = false;
+    }
+});
+  // 点击空白处取消选择
+  container.addEventListener('click', (e) => {
+    if (e.target === container && selectedNodes.size > 0) {
+      clearSelection();
+    }
+  });
+
+  // 辅助函数：通过元素查找节点
+  function findNodeByElement(element) {
+    return nodes.find(node => node.element === element);
+  }
+
+  // 滾輪縮放
+  container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+
+    // 獲取鼠標位置相對於視口的坐標
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // 計算縮放前的世界坐標
+    const worldX = (mouseX - translateX) / scale;
+    const worldY = (mouseY - translateY) / scale;
+
+    // 計算新的縮放比例
+    const delta = -e.deltaY;
+    const newScale = delta > 0 ? scale * 1.1 : scale / 1.1;
+    scale = Math.min(Math.max(0.1, newScale), 3);
+
+    // 計算新的平移值 - 保持鼠標下的點在相同位置
+    translateX = mouseX - worldX * scale;
+    translateY = mouseY - worldY * scale;
+
+    // 應用變換
+    applyTransform();
+  });
+
+  function applyTransform() {
+    // 同時更新 transformContainer 和 nodesContainer 的變換
+    transformContainer.style.transform = `
+translate(${translateX}px, ${translateY}px)
+  scale(${scale})
+    `;
+    nodesContainer.style.transform = `
+translate(${translateX}px, ${translateY}px)
+  scale(${scale})
+    `;
+    drawConnections();
+    updateNodeList();
+  }
+
+function drawConnections() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  // 先繪製非折疊節點的連接
+  connections.forEach(conn => {
+    const fromNode = nodes[conn.fromNode];
+    const toNode = nodes[conn.toNode];
+    
+    // 獲取輸出端口
+    let fromPort;
+    if (fromNode.element.classList.contains('collapsed')) {
+      // 折疊狀態：使用第一個header端口作為所有連接的起點
+      fromPort = fromNode.element.querySelector('.header-port');
+    } else {
+      // 正常狀態：使用對應的輸出端口
+      fromPort = fromNode.element.querySelectorAll('.output-port:not(.header-port)')[conn.fromOutput];
+    }
+    
+    const toPort = toNode.element.querySelector('.input-port');
+    if (!fromPort || !toPort) return;
+
+    const fromRect = fromPort.getBoundingClientRect();
+    const toRect = toPort.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    const startX = fromRect.left + fromRect.width / 2 - containerRect.left;
+    const startY = fromRect.top + fromRect.height / 2 - containerRect.top;
+    const endX = toRect.left + toRect.width / 2 - containerRect.left;
+    const endY = toRect.top + toRect.height / 2 - containerRect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    
+    // 折疊狀態下的曲線調整
+    if (fromNode.element.classList.contains('collapsed')) {
+      const controlOffset = 100 + (conn.fromOutput * 15); // 根據輸出索引增加偏移
+      ctx.bezierCurveTo(
+        startX + controlOffset, startY,
+        endX - 100, endY,
+        endX, endY
+      );
+    } else {
+      ctx.bezierCurveTo(
+        startX + 100, startY,
+        endX - 100, endY,
+        endX, endY
+      );
+    }
+    
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // 繪製正在連接中的線條
+  if (connecting) {
+    const fromNode = nodes[connecting.fromNode];
+    let fromPort;
+    if (fromNode.element.classList.contains('collapsed')) {
+      fromPort = fromNode.element.querySelector(`.header-port[data-output-index="${connecting.fromOutput}"]`);
+    } else {
+      fromPort = fromNode.element.querySelectorAll('.output-port:not(.header-port)')[connecting.fromOutput];
+    }
+
+    if (!fromPort) return;
+
+    const fromRect = fromPort.getBoundingClientRect();
+    const startX = fromRect.left + fromRect.width / 2 - container.getBoundingClientRect().left;
+    const startY = fromRect.top + fromRect.height / 2 - container.getBoundingClientRect().top;
+    const endX = connecting.currentX - container.getBoundingClientRect().left;
+    const endY = connecting.currentY - container.getBoundingClientRect().top;
+
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2 * (1/scale);
+    ctx.stroke();
+  }
+}
+
+  // 修改初始化代碼
+  function init() {
+    // 設置canvas大小
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+
+    // 初始化位置和縮放
+    scale = 1;
+    translateX = container.offsetWidth / 2 - 100;
+    translateY = container.offsetHeight / 2 - 50;
+
+    applyTransform();
+
+    // 創建初始節點
+    createNode(-100, -50);
+    // 初始高亮檢查
+    updateSameNameHighlights();
+
+      // 初始化左側面板
+  updateNodeList();
+
+
+    // 設置定期檢查可見節點的定時器
+  setInterval(checkVisibleNodes, 500);
+  }
+
+// 檢查可見節點並更新列表
+function checkVisibleNodes() {
+  const visibleNodes = getVisibleNodes();
+  if (JSON.stringify(visibleNodes) !== JSON.stringify(lastVisibleNodes)) {
+    updateNodeList();
+    lastVisibleNodes = visibleNodes;
+  }
+}
+
+// 獲取當前可見的節點（修正座標版本）
+function getVisibleNodes() {
+  // 1. 獲取視口可見區域（不考慮左側面板，使用整個視窗）
+  const viewport = {
+    left: 0,
+    right: window.innerWidth,
+    top: 0,
+    bottom: window.innerHeight
+  };
+
+  return nodes.filter(node => {
+    // 2. 直接使用getBoundingClientRect獲取屏幕座標
+    const rect = node.element.getBoundingClientRect();
+    
+    // 3. 檢查節點是否在視口內（完全精確判斷）
+    const isVisible = (
+      rect.right > viewport.left &&
+      rect.left < viewport.right &&
+      rect.bottom > viewport.top &&
+      rect.top < viewport.bottom
+    );
+
+    // 4. 控制名稱顯示（直接基於屏幕座標判斷）
+    const nameElement = node.element.querySelector('.node-name');
+    if (nameElement) {
+      nameElement.style.display = isVisible ? 'block' : 'none';
+    }
+
+    // 5. 返回節點是否在緩衝區內（用於渲染優化）
+    const buffer = -200; // 屏幕像素緩衝
+    const inBufferArea = (
+      rect.right > (viewport.left - buffer) &&
+      rect.left < (viewport.right + buffer) &&
+      rect.bottom > (viewport.top - buffer) &&
+      rect.top < (viewport.bottom + buffer)
+    );
+
+    return inBufferArea;
+  });
+}
+
+function debugVisibleArea() {
+  const visibleNodes = getVisibleNodes();
+  console.log('=== 可見區域調試信息 ===');
+  
+  // 1. 打印視口信息
+  const screenLeft = document.getElementById('left-panel')?.offsetWidth || 0;
+  console.log('屏幕坐標可見區域:', {
+    left: screenLeft,
+    right: window.innerWidth,
+    top: 0,
+    bottom: window.innerHeight
+  });
+  
+  // 2. 打印世界坐標可見區域
+  console.log('世界坐標可見區域:', {
+    left: toWorldX(screenLeft),
+    right: toWorldX(window.innerWidth),
+    top: toWorldY(0),
+    bottom: toWorldY(window.innerHeight)
+  });
+  
+  // 3. 打印節點狀態
+  nodes.forEach(node => {
+    const isVisible = visibleNodes.includes(node);
+    const screenX = toScreenX(node.x);
+    const screenY = toScreenY(node.y);
+    
+    console.log(`節點 ${node.id}:`, {
+      世界坐標: { x: node.x, y: node.y },
+      屏幕坐標: { x: screenX, y: screenY },
+      尺寸: { 
+        world: { w: node.element.offsetWidth / scale, h: node.element.offsetHeight / scale },
+        screen: { w: node.element.offsetWidth, h: node.element.offsetHeight }
+      },
+      可見: isVisible,
+      完全在視口內: (
+        screenX >= screenLeft &&
+        screenX <= window.innerWidth &&
+        screenY >= 0 &&
+        screenY <= window.innerHeight
+      )
+    });
+  });
+}
+// 輔助函數：獲取節點高度
+function getNodeHeight(nodeElement) {
+  // 簡單估算節點高度（可根據實際需求調整）
+  const titleHeight = 30;
+  const paragraphHeight = nodeElement.querySelector('.paragraph-input') ? 70 : 0;
+  const itemsHeight = nodeElement.querySelectorAll('.item').length * 30;
+  const buttonsHeight = 30;
+  
+  return titleHeight + paragraphHeight + itemsHeight + buttonsHeight + 20; // 20px padding
+}
+
+// 輔助函數：獲取當前變換矩陣
+function getTransformMatrix() {
+  const transformValue = transformContainer.style.transform;
+  if (!transformValue) return { scale: 1, translateX: 0, translateY: 0 };
+  
+  const matrix = transformValue.match(/matrix\(([^)]+)\)/);
+  if (matrix) {
+    const values = matrix[1].split(',').map(parseFloat);
+    return {
+      scale: values[0], // 假設均勻縮放
+      translateX: values[4],
+      translateY: values[5]
+    };
+  }
+  
+  // 回退到解析 translate 和 scale
+  const translate = transformValue.match(/translate\(([^)]+)\)/);
+  const scaleMatch = transformValue.match(/scale\(([^)]+)\)/);
+  
+  return {
+    scale: scaleMatch ? parseFloat(scaleMatch[1]) : 1,
+    translateX: translate ? parseFloat(translate[1].split(',')[0]) : 0,
+    translateY: translate ? parseFloat(translate[1].split(',')[1]) : 0
+  };
+}
+
+// 更新節點列表 - 優化版本
+function updateNodeList() {
+  const nodeList = document.getElementById('node-list');
+  if (!nodeList) return;
+  
+  requestAnimationFrame(() => {
+    const visibleNodes = getVisibleNodes();
+    const visibleNodeIds = visibleNodes.map(n => n.id).join(',');
+    const lastVisibleNodeIds = (lastVisibleNodes || []).map(n => n.id).join(',');
+    
+    if (visibleNodeIds === lastVisibleNodeIds) return;
+    
+    saveCurrentDescriptions();
+    
+    // 建立節點名稱到描述的映射
+    const nameToDescriptionMap = {};
+    nodes.forEach(node => {
+      const title = node.element.querySelector('.node-title')?.value || '未命名節點';
+      if (nodeDescriptions[node.id] && nodeDescriptions[node.id].trim() !== '') {
+        // 如果這個節點有描述，記錄到映射中
+        nameToDescriptionMap[title] = nodeDescriptions[node.id];
+      }
+    });
+    
+    const fragment = document.createDocumentFragment();
+    
+    visibleNodes.forEach(node => {
+      const nodeElement = document.createElement('div');
+      nodeElement.className = 'node-list-item';
+      
+      const title = node.element.querySelector('.node-title')?.value || '未命名節點';
+      
+      // 檢查是否有相同名稱的節點已經有描述
+      let description = nodeDescriptions[node.id] || '';
+      if (!description.trim() && nameToDescriptionMap[title]) {
+        // 如果當前節點沒有描述，但相同名稱的節點有描述，則使用該描述
+        description = nameToDescriptionMap[title];
+        nodeDescriptions[node.id] = description; // 更新節點描述資料
+      }
+      
+      nodeElement.innerHTML = `
+        <div class="node-list-name">${escapeHtml(title)}</div>
+        <textarea class="node-list-description" data-node-id="${node.id}" 
+          placeholder="輸入節點描述...">${escapeHtml(description)}</textarea>
+      `;
+      
+      const descInput = nodeElement.querySelector('.node-list-description');
+      descInput.addEventListener('input', () => {
+        const newDescription = descInput.value;
+        nodeDescriptions[descInput.dataset.nodeId] = newDescription;
+        
+        // 當描述變更時，更新所有同名節點的描述
+        if (newDescription.trim() !== '') {
+          const currentTitle = node.element.querySelector('.node-title')?.value || '未命名節點';
+          nodes.forEach(n => {
+            const nTitle = n.element.querySelector('.node-title')?.value || '未命名節點';
+            if (nTitle === currentTitle && n.id !== node.id) {
+              nodeDescriptions[n.id] = newDescription;
+            }
+          });
+           syncDescriptionsForSameNameNodes(descInput.dataset.nodeId);
+          // 觸發重新渲染節點列表
+          updateNodeList();
+        }
+      });
+      
+      fragment.appendChild(nodeElement);
+    });
+    
+    nodeList.innerHTML = '';
+    nodeList.appendChild(fragment);
+    lastVisibleNodes = visibleNodes;
+  });
+}
+
+// 優化的檢查函數
+function checkVisibleNodes() {
+  // 使用防抖技術減少頻繁檢查
+  if (!this.checkVisibleNodesDebounce) {
+    this.checkVisibleNodesDebounce = debounce(() => {
+      updateNodeList();
+    }, 100);
+  }
+  this.checkVisibleNodesDebounce();
+}
+
+// 簡單的防抖函數
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this, args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
+// 保存當前描述
+function saveCurrentDescriptions() {
+  document.querySelectorAll('.node-list-description').forEach(input => {
+    nodeDescriptions[input.dataset.nodeId] = input.value;
+  });
+}
+
+
+  // 初始化
+  init();
+
+  // 初始化視圖位置
+  translateX = window.innerWidth / 2 - 100;
+  translateY = window.innerHeight / 2 - 50;
+nodesContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+  // 初始化一個節點
+  //createNode(0, 0);
+  </script>
+  </body>
+  </html>
